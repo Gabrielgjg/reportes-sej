@@ -7,6 +7,9 @@
 <title>Reportes SEJ</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Reportes SEJ">
 <style>
 :root {
   --tinta: #1D3557;
@@ -152,8 +155,10 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
     <input id="lPass" type="password" autocomplete="current-password" required>
     <div class="error" id="lError" role="alert"></div>
     <button class="btn" type="submit" id="lEntrar">Entrar</button>
+    <div class="aviso" data-instalar hidden style="margin-top:1rem"></div>
     <div class="pie">¿Olvidaste tu contraseña? Pide a Dirección que la restablezca.<br><br>
-      <button class="enlace" type="button" id="lCambiarServidor">Cambiar servidor</button></div>
+      <button class="enlace" type="button" id="lCambiarServidor">Cambiar servidor</button>
+      <span data-instalar-link hidden> · <button class="enlace" type="button" data-instalar-btn>Instalar en este aparato</button></span></div>
   </form>
 </section>
 
@@ -184,6 +189,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
       <button class="cuenta" id="btnCuenta" aria-haspopup="true" aria-expanded="false"></button>
     </div>
     <div class="menu" id="menuCuenta" hidden>
+      <button id="mInstalar" data-instalar-link hidden>Instalar en este aparato</button>
       <button id="mCambiar">Cambiar mi contraseña</button>
       <button id="mSalir">Cerrar sesión</button>
     </div>
@@ -234,6 +240,15 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
       <button class="btn sec" type="button" id="dtCopiar">Copiar datos</button>
       <button class="btn" type="button" data-cerrar>Listo</button>
     </div>
+  </div>
+</dialog>
+
+<!-- Instalar -->
+<dialog id="dInstalar">
+  <div class="cuerpo">
+    <h2>Instalar Reportes SEJ</h2>
+    <div id="diTexto"></div>
+    <div class="botones"><button class="btn" type="button" data-cerrar>Entendido</button></div>
   </div>
 </dialog>
 
@@ -514,6 +529,7 @@ function pintarApp() {
   $("pestanas").querySelectorAll("button").forEach(b => b.onclick = () => b.dataset.vista === "reportes" ? location.href = "direccion.html" : irA(b.dataset.vista));
   irA(vistaActual);
   pintarRed();
+  pintarInstalar();
 }
 
 function irA(vista) {
@@ -530,6 +546,7 @@ function pintarInicio() {
   const ejemplo = `${u.iniciales}1A${rol.sep}00001`;
   const filas = prefijos.map(p => `<tr><td data-t="Grado y grupo">${esc(p.slice(u.iniciales.length))}</td><td data-t="Último folio"><b>${esc(p + rol.sep + String(cont[p]).padStart(5, "0"))}</b></td></tr>`).join("");
   $("vInicio").innerHTML = `
+    <div class="aviso" data-instalar hidden></div>
     ${u.activo === false ? `<div class="aviso"><b>Tu usuario fue dado de baja.</b> Puedes entregar lo que capturaste antes, pero ya no consultar información.</div>` : ""}
     <div class="credencial" style="--color-area:${rol.color}">
       <div class="sello"><b>${esc(u.iniciales)}</b><span>tus folios</span></div>
@@ -820,10 +837,70 @@ function confirmar(titulo, texto, si, peligro) {
 }
 
 // ------------------------------------------------------------
+//  Instalar como app
+// ------------------------------------------------------------
+let avisoInstalar = null;
+const ua = navigator.userAgent;
+const esIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const esAndroid = /Android/i.test(ua);
+const enNavegadorInterno = /FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)/i.test(ua);
+const instalada = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+// Enlaces "Instalar" (siempre que no esté instalada) y aviso destacado (cuando el aparato lo permite)
+function pintarInstalar() {
+  document.querySelectorAll("[data-instalar-link]").forEach(el => el.hidden = instalada());
+  document.querySelectorAll("[data-instalar]").forEach(el => {
+    const mostrar = !instalada() && (avisoInstalar || esIOS || esAndroid);
+    el.hidden = !mostrar;
+    if (!mostrar) return;
+    el.innerHTML = `<b>Instala la app en este aparato</b> para abrirla con un toque y usarla sin internet.
+      <div style="margin-top:.6rem"><button class="btn chico" type="button">Instalar Reportes SEJ</button></div>`;
+    el.querySelector("button").onclick = instalar;
+  });
+}
+const mostrarBotonesInstalar = pintarInstalar;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); avisoInstalar = e; pintarInstalar(); });
+window.addEventListener("appinstalled", () => { avisoInstalar = null; pintarInstalar(); toast("App instalada. Búscala como «Reportes SEJ» entre tus aplicaciones."); });
+
+async function instalar() {
+  $("menuCuenta").hidden = true;
+  if (avisoInstalar) {
+    avisoInstalar.prompt();
+    const r = await avisoInstalar.userChoice.catch(() => null);
+    avisoInstalar = null; pintarInstalar();
+    if (r && r.outcome === "accepted") return;
+  }
+  let html;
+  if (enNavegadorInterno) {
+    html = `<p>Estás dentro de otra app (WhatsApp, Facebook…), y ahí no se puede instalar.</p>
+      <p>Abre el menú <b>⋮</b> o <b>…</b> y elige <b>Abrir en el navegador</b> (Chrome o Safari). Ahí vuelve a pulsar «Instalar».</p>`;
+  } else if (esIOS) {
+    html = `<p>En iPhone o iPad se instala desde <b>Safari</b>:</p>
+      <ol><li>Toca el botón <b>Compartir</b> (el cuadro con una flecha hacia arriba).</li>
+      <li>Elige <b>Agregar a pantalla de inicio</b>.</li><li>Toca <b>Agregar</b>.</li></ol>
+      <p class="ayuda">Si usas Chrome en iPhone, el botón Compartir está junto a la barra de direcciones.</p>`;
+  } else if (esAndroid) {
+    html = `<p>En Android, desde <b>Chrome</b>:</p>
+      <ol><li>Toca el menú <b>⋮</b> (arriba a la derecha).</li><li>Elige <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li></ol>
+      <p><b>Si dice que ya está instalada</b>, búscala como <b>Reportes SEJ</b> en el cajón de aplicaciones (desliza hacia arriba en la pantalla de inicio). Si no aparece, ve a <b>Ajustes → Aplicaciones</b>, desinstala «Reportes SEJ» y vuelve a instalarla desde aquí.</p>`;
+  } else {
+    html = `<p>En computadora, desde <b>Chrome</b> o <b>Edge</b>:</p>
+      <ol><li>Busca el ícono de instalar (una pantalla con flecha) al final de la barra de direcciones.</li>
+      <li>O abre el menú <b>⋮</b> → <b>Transmitir, guardar y compartir</b> → <b>Instalar página como app</b>.</li></ol>
+      <p><b>Si dice que ya está instalada</b>: escribe <code>chrome://apps</code> en la barra de direcciones; ahí aparece «Reportes SEJ». Si no abre, haz clic derecho sobre ella → <b>Quitar de Chrome</b> y vuelve a instalarla.</p>`;
+  }
+  $("diTexto").innerHTML = html;
+  $("dInstalar").showModal();
+}
+document.querySelectorAll("[data-instalar-btn], #mInstalar").forEach(b => b.addEventListener("click", instalar));
+mostrarBotonesInstalar();
+
+// ------------------------------------------------------------
 //  Arranque
 // ------------------------------------------------------------
 if (ses && !sesionVigente(ses)) { ses = null; localStorage.removeItem(K.ses); $("lError").textContent = "Tu sesión venció. Inicia sesión de nuevo."; }
 mostrar();
+pintarInstalar();
 refrescarSesion();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => { });
 </script>
