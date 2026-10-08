@@ -251,7 +251,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 
 <script>
 "use strict";
-const APP_VERSION = "8.0-etapa2a";
+const APP_VERSION = "8.0.1-etapa2a";
 const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
 const ROLES = {
   prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
@@ -287,10 +287,19 @@ async function api(accion, datos = {}, url = cfg.url) {
   try {
     r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(cuerpo) });
   } catch (e) {
-    throw new ErrorApi("No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED");
+    throw new ErrorApi(accion === "ping"
+      ? "No se pudo conectar. Revisa tu internet y que el script esté publicado con acceso para «Cualquier usuario»."
+      : "No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED");
   }
   let d;
   try { d = await r.json(); } catch (e) { throw new ErrorApi("El servidor respondió algo inesperado. Revisa la dirección del servidor.", "RESPUESTA"); }
+  // Si Google convirtió el envío en GET, se repite por la vía de respaldo.
+  if (d && d.codigo === "V7_DESACTIVADA") {
+    try {
+      r = await fetch(url + "?p=" + encodeURIComponent(JSON.stringify(cuerpo)));
+      d = await r.json();
+    } catch (e) { throw new ErrorApi("No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED"); }
+  }
   if (!d.ok) {
     if (d.codigo === "SESION_INVALIDA" && accion !== "login") { cerrarLocal(d.error); }
     if (d.codigo === "USUARIO_BAJA" && ses) { ses.usuario.activo = false; guardar(K.ses, ses); }
