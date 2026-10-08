@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D3557">
+<title>Reportes SEJ</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root {
+  --tinta: #1D3557;
+  --tinta-2: #2C4A73;
+  --papel: #F4F6F3;
+  --hoja: #FFFFFF;
+  --linea: #D5DBD6;
+  --texto: #1E2422;
+  --suave: #5B6662;
+  --gabinete: #23867A;
+  --direccion: #8A5A00;
+  --alerta: #B42318;
+  --aviso: #FFF4D6;
+  --ok: #2F7D4A;
+  --radio: 10px;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  color: var(--texto);
+  background: var(--papel);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); font-size: 16px; line-height: 1.5; }
+h1, h2, h3 { line-height: 1.2; margin: 0 0 .5rem; letter-spacing: -0.01em; }
+h1 { font-size: 1.6rem; } h2 { font-size: 1.25rem; } h3 { font-size: 1.05rem; }
+p { margin: 0 0 .75rem; }
+button, input, select { font: inherit; }
+:focus-visible { outline: 3px solid #E9A23B; outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.btn { border: 1px solid var(--tinta); background: var(--tinta); color: #fff; padding: .6rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.btn:disabled { opacity: .55; cursor: wait; }
+.btn.sec { background: transparent; color: var(--tinta); }
+.btn.peligro { background: var(--alerta); border-color: var(--alerta); }
+.btn.chico { padding: .35rem .7rem; font-size: .9rem; font-weight: 600; }
+.enlace { background: none; border: 0; color: var(--tinta-2); text-decoration: underline; cursor: pointer; padding: 0; }
+
+label { display: block; font-weight: 600; font-size: .92rem; margin: .9rem 0 .3rem; }
+input, select { width: 100%; padding: .65rem .75rem; border: 1px solid #AEB8B2; border-radius: 8px; background: #fff; color: var(--texto); }
+input:focus, select:focus { border-color: var(--tinta); }
+.ayuda { color: var(--suave); font-size: .86rem; margin-top: .3rem; }
+.error { color: var(--alerta); font-weight: 600; min-height: 1.4em; margin-top: .75rem; }
+.ok { color: var(--ok); font-weight: 600; }
+
+/* Pantallas de acceso */
+.acceso { min-height: 100vh; display: grid; place-items: center; padding: 1.25rem; }
+.acceso .caja { width: 100%; max-width: 400px; background: var(--hoja); border: 1px solid var(--linea); border-radius: 14px; padding: 1.75rem 1.5rem; }
+.acceso .marca { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; }
+.acceso .marca img { width: 44px; height: 44px; }
+.acceso .marca div { font-weight: 700; font-size: 1.15rem; color: var(--tinta); line-height: 1.2; }
+.acceso .marca small { display: block; font-weight: 500; color: var(--suave); font-size: .85rem; }
+.acceso .btn { width: 100%; margin-top: 1.25rem; padding: .75rem; }
+.acceso .pie { margin-top: 1.25rem; font-size: .88rem; color: var(--suave); text-align: center; }
+
+/* Barra superior */
+.barra { position: sticky; top: 0; z-index: 5; background: var(--tinta); color: #fff; }
+.barra .dentro { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; }
+.barra .titulo { font-weight: 700; flex: 1; }
+.barra .estado { font-size: .8rem; padding: .15rem .55rem; border-radius: 99px; background: rgba(255,255,255,.14); }
+.barra .estado.fuera { background: #E9A23B; color: #2B1B00; }
+.barra .cuenta { background: transparent; border: 1px solid rgba(255,255,255,.5); color: #fff; border-radius: 8px; padding: .35rem .7rem; cursor: pointer; }
+.menu { position: absolute; right: 1rem; top: 3.2rem; background: #fff; color: var(--texto); border: 1px solid var(--linea); border-radius: 10px; box-shadow: 0 8px 24px rgba(29,53,87,.18); min-width: 220px; overflow: hidden; }
+.menu button { display: block; width: 100%; text-align: left; padding: .75rem 1rem; background: none; border: 0; cursor: pointer; }
+.menu button:hover { background: var(--papel); }
+
+.pestanas { max-width: 1040px; margin: 0 auto; display: flex; gap: .25rem; padding: 0 1rem; overflow-x: auto; }
+.pestanas button { background: none; border: 0; color: rgba(255,255,255,.75); padding: .6rem .9rem; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; font-weight: 600; }
+.pestanas button[aria-selected="true"] { color: #fff; border-bottom-color: #E9A23B; }
+
+main { max-width: 1040px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+
+/* Credencial: las iniciales son la identidad en cada folio */
+.credencial { display: grid; grid-template-columns: auto 1fr; gap: 1.25rem; align-items: center; background: var(--hoja); border: 1px solid var(--linea); border-left: 6px solid var(--color-area, var(--tinta)); border-radius: var(--radio); padding: 1.25rem; margin-bottom: 1.5rem; }
+.sello { border: 3px solid var(--color-area, var(--tinta)); color: var(--color-area, var(--tinta)); border-radius: 12px; padding: .5rem .9rem; text-align: center; transform: rotate(-3deg); }
+.sello b { display: block; font-size: 2.2rem; letter-spacing: .06em; line-height: 1; }
+.sello span { font-size: .72rem; font-weight: 700; }
+.credencial .area { color: var(--color-area, var(--tinta)); font-weight: 700; }
+.credencial .ejemplo { font-family: inherit; font-variant-numeric: tabular-nums; color: var(--suave); font-size: .9rem; }
+
+.bloque { background: var(--hoja); border: 1px solid var(--linea); border-radius: var(--radio); padding: 1.25rem; margin-bottom: 1.25rem; }
+.encabezado { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.encabezado h2 { margin: 0; }
+.vacio { color: var(--suave); padding: 1rem 0; }
+.aviso { background: var(--aviso); border: 1px solid #E8C873; border-radius: 8px; padding: .8rem 1rem; margin-bottom: 1rem; }
+
+/* Tablas que se vuelven tarjetas en teléfono */
+.tabla { width: 100%; border-collapse: collapse; }
+.tabla th { text-align: left; font-size: .85rem; color: var(--suave); font-weight: 600; padding: .5rem; border-bottom: 2px solid var(--linea); }
+.tabla td { padding: .7rem .5rem; border-bottom: 1px solid var(--linea); vertical-align: top; }
+.tabla .acciones { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; min-width: 15rem; }
+.tabla td[data-t="Último acceso"] { white-space: nowrap; }
+.tabla tr.inactivo td { color: var(--suave); }
+.ini { font-weight: 800; letter-spacing: .05em; }
+.etiqueta { display: inline-block; white-space: nowrap; font-size: .78rem; font-weight: 700; padding: .1rem .5rem; border-radius: 99px; border: 1px solid currentColor; }
+.r-prefectura { color: var(--tinta); } .r-gabinete { color: var(--gabinete); } .r-direccion { color: var(--direccion); }
+.e-baja { color: var(--alerta); } .e-temporal { color: #8A6100; }
+@media (max-width: 720px) {
+  .tabla thead { display: none; }
+  .tabla tr { display: block; border: 1px solid var(--linea); border-radius: 10px; padding: .6rem .8rem; margin-bottom: .75rem; }
+  .tabla td { display: block; border: 0; padding: .2rem 0; }
+  .tabla td[data-t]::before { content: attr(data-t) ": "; color: var(--suave); font-size: .85rem; }
+  .tabla .acciones { justify-content: flex-start; margin-top: .4rem; }
+  .credencial { grid-template-columns: 1fr; }
+  .sello { justify-self: start; }
+}
+
+dialog { border: 0; border-radius: 14px; padding: 0; width: min(480px, calc(100vw - 2rem)); box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+dialog::backdrop { background: rgba(29,53,87,.45); }
+dialog form, dialog .cuerpo { padding: 1.4rem 1.4rem 1.2rem; }
+dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.25rem; flex-wrap: wrap; }
+.credencial-nueva { background: var(--papel); border: 2px dashed var(--tinta); border-radius: 10px; padding: 1rem; margin: 1rem 0; font-size: 1.05rem; }
+.credencial-nueva b { font-size: 1.3rem; letter-spacing: .04em; }
+
+.lista-bitacora li { padding: .55rem 0; border-bottom: 1px solid var(--linea); list-style: none; }
+.lista-bitacora { padding: 0; margin: 0; }
+.lista-bitacora small { color: var(--suave); }
+.toast { position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); background: var(--texto); color: #fff; padding: .7rem 1.1rem; border-radius: 10px; z-index: 50; max-width: calc(100vw - 2rem); }
+@media (prefers-reduced-motion: no-preference) { dialog[open] { animation: aparecer .16s ease-out; } @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } } }
+</style>
+</head>
+<body>
+
+<!-- ============ CONFIGURAR SERVIDOR ============ -->
+<section id="pConfig" class="acceso" hidden>
+  <div class="caja">
+    <div class="marca"><img src="icon.svg" alt=""><div>Reportes SEJ<small>Conectar con la escuela</small></div></div>
+    <p>Pega la dirección del servidor de tu escuela. Solo se hace una vez en este aparato.</p>
+    <label for="cfgUrl">Dirección del servidor</label>
+    <input id="cfgUrl" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
+    <div class="ayuda">Te la da quien administra el sistema. Termina en <b>/exec</b>.</div>
+    <div class="error" id="cfgError" role="alert"></div>
+    <button class="btn" id="cfgGuardar">Conectar</button>
+    <div class="pie" id="cfgVolver" hidden><button class="enlace" data-ir="login">Cancelar</button></div>
+  </div>
+</section>
+
+<!-- ============ INICIAR SESIÓN ============ -->
+<section id="pLogin" class="acceso" hidden>
+  <form class="caja" id="fLogin">
+    <div class="marca"><img src="icon.svg" alt=""><div>Reportes SEJ<small>Prefectura · Gabinete · Dirección</small></div></div>
+    <label for="lUsuario">Usuario</label>
+    <input id="lUsuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="lPass">Contraseña</label>
+    <input id="lPass" type="password" autocomplete="current-password" required>
+    <div class="error" id="lError" role="alert"></div>
+    <button class="btn" type="submit" id="lEntrar">Entrar</button>
+    <div class="pie">¿Olvidaste tu contraseña? Pide a Dirección que la restablezca.<br><br>
+      <button class="enlace" type="button" id="lCambiarServidor">Cambiar servidor</button></div>
+  </form>
+</section>
+
+<!-- ============ CAMBIAR CONTRASEÑA ============ -->
+<section id="pCambio" class="acceso" hidden>
+  <form class="caja" id="fCambio">
+    <div class="marca"><img src="icon.svg" alt=""><div id="cTitulo">Crea tu contraseña<small id="cSub">Es tu primer acceso</small></div></div>
+    <p id="cTexto">Escribe la contraseña temporal que te dio Dirección y luego una nueva que solo tú conozcas.</p>
+    <label for="cActual" id="cActualLbl">Contraseña temporal</label>
+    <input id="cActual" type="password" autocomplete="current-password" required>
+    <label for="cNueva">Contraseña nueva</label>
+    <input id="cNueva" type="password" autocomplete="new-password" minlength="6" required>
+    <div class="ayuda">Al menos 6 caracteres.</div>
+    <label for="cNueva2">Repite la contraseña nueva</label>
+    <input id="cNueva2" type="password" autocomplete="new-password" minlength="6" required>
+    <div class="error" id="cError" role="alert"></div>
+    <button class="btn" type="submit" id="cGuardar">Guardar contraseña</button>
+    <div class="pie"><button class="enlace" type="button" id="cCancelar">Cancelar</button></div>
+  </form>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="pApp" hidden>
+  <header class="barra">
+    <div class="dentro">
+      <div class="titulo">Reportes SEJ</div>
+      <span class="estado" id="estadoRed">En línea</span>
+      <button class="cuenta" id="btnCuenta" aria-haspopup="true" aria-expanded="false"></button>
+    </div>
+    <div class="menu" id="menuCuenta" hidden>
+      <button id="mCambiar">Cambiar mi contraseña</button>
+      <button id="mSalir">Cerrar sesión</button>
+    </div>
+    <nav class="pestanas" id="pestanas" role="tablist"></nav>
+  </header>
+  <main>
+    <section id="vInicio"></section>
+    <section id="vUsuarios" hidden></section>
+    <section id="vHistorial" hidden></section>
+    <section id="vBitacora" hidden></section>
+  </main>
+</div>
+
+<!-- Alta / edición de usuario -->
+<dialog id="dUsuario">
+  <form id="fUsuario" method="dialog">
+    <h2 id="duTitulo">Agregar usuario</h2>
+    <label for="duNombre">Nombre completo</label>
+    <input id="duNombre" required autocomplete="off">
+    <div class="ayuda">Como debe aparecer en los reportes.</div>
+    <label for="duUsuario">Usuario para entrar</label>
+    <input id="duUsuario" required autocapitalize="none" spellcheck="false" autocomplete="off" pattern="[a-z][a-z0-9._\-]{2,29}">
+    <div class="ayuda">Minúsculas, sin espacios ni acentos. Por ejemplo: melisa.ruiz</div>
+    <label for="duIniciales">Iniciales para sus folios</label>
+    <input id="duIniciales" required maxlength="4" autocomplete="off" style="text-transform:uppercase">
+    <div class="ayuda" id="duInicialesAyuda">2 a 4 letras. No se pueden repetir entre usuarios.</div>
+    <label for="duRol">Área</label>
+    <select id="duRol">
+      <option value="prefectura">Prefectura</option>
+      <option value="gabinete">Gabinete psicopedagógico</option>
+      <option value="direccion">Dirección</option>
+    </select>
+    <div class="error" id="duError" role="alert"></div>
+    <div class="botones">
+      <button class="btn sec" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit" id="duGuardar">Agregar usuario</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Contraseña temporal recién creada -->
+<dialog id="dTemporal">
+  <div class="cuerpo">
+    <h2 id="dtTitulo">Usuario creado</h2>
+    <p>Entrégale estos datos en persona. La contraseña temporal solo se muestra esta vez; al entrar se le pedirá crear la suya.</p>
+    <div class="credencial-nueva" id="dtDatos"></div>
+    <div class="botones">
+      <button class="btn sec" type="button" id="dtCopiar">Copiar datos</button>
+      <button class="btn" type="button" data-cerrar>Listo</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Confirmación -->
+<dialog id="dConfirmar">
+  <div class="cuerpo">
+    <h2 id="dcTitulo"></h2>
+    <p id="dcTexto"></p>
+    <div class="botones">
+      <button class="btn sec" type="button" id="dcNo">Cancelar</button>
+      <button class="btn" type="button" id="dcSi"></button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const APP_VERSION = "8.0-etapa2a";
+const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
+const ROLES = {
+  prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
+  gabinete: { etiqueta: "Gabinete psicopedagógico", color: "var(--gabinete)", sep: "-" },
+  direccion: { etiqueta: "Dirección", color: "var(--direccion)", sep: "X" }
+};
+const ACCIONES_BITACORA = {
+  login: "Inició sesión", cambiarPassword: "Cambió su contraseña", crearUsuario: "Creó un usuario",
+  actualizarUsuario: "Modificó un usuario", restablecerPassword: "Restableció una contraseña",
+  asignarHistorial: "Asignó reportes anteriores", leerTodo: "Consultó todos los reportes"
+};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const leer = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
+
+let cfg = leer(K.cfg) || { url: "" };
+let ses = leer(K.ses);           // { token, expira, usuario, contadores }
+let usuariosCache = [];
+let vistaActual = "inicio";
+
+// ------------------------------------------------------------
+//  Comunicación con el servidor
+// ------------------------------------------------------------
+class ErrorApi extends Error { constructor(msg, codigo) { super(msg); this.codigo = codigo; } }
+
+async function api(accion, datos = {}, url = cfg.url) {
+  if (!navigator.onLine) throw new ErrorApi("No hay conexión a internet.", "SIN_RED");
+  const cuerpo = Object.assign({ accion }, datos);
+  if (ses && ses.token && !cuerpo.token && accion !== "login") cuerpo.token = ses.token;
+  let r;
+  try {
+    r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(cuerpo) });
+  } catch (e) {
+    throw new ErrorApi("No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED");
+  }
+  let d;
+  try { d = await r.json(); } catch (e) { throw new ErrorApi("El servidor respondió algo inesperado. Revisa la dirección del servidor.", "RESPUESTA"); }
+  if (!d.ok) {
+    if (d.codigo === "SESION_INVALIDA" && accion !== "login") { cerrarLocal(d.error); }
+    if (d.codigo === "USUARIO_BAJA" && ses) { ses.usuario.activo = false; guardar(K.ses, ses); }
+    if (d.codigo === "DEBE_CAMBIAR" && ses) { ses.usuario.debeCambiar = true; guardar(K.ses, ses); mostrar(); }
+    throw new ErrorApi(d.error || "Ocurrió un error.", d.codigo);
+  }
+  return d;
+}
+
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function ocupado(btn, si, texto) {
+  if (si) { btn.dataset.txt = btn.textContent; btn.textContent = texto || "Un momento…"; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.txt || btn.textContent; btn.disabled = false; }
+}
+
+// ------------------------------------------------------------
+//  Qué pantalla se ve
+// ------------------------------------------------------------
+function mostrar() {
+  ["pConfig", "pLogin", "pCambio", "pApp"].forEach(id => $(id).hidden = true);
+  if (!cfg.url) { $("cfgVolver").hidden = true; $("pConfig").hidden = false; $("cfgUrl").focus(); return; }
+  if (!ses) { $("pLogin").hidden = false; $("lUsuario").focus(); return; }
+  if (ses.usuario.debeCambiar) { abrirCambio(true); return; }
+  $("pApp").hidden = false;
+  pintarApp();
+}
+
+function sesionVigente(s) { return s && s.token && new Date(s.expira) > new Date(); }
+
+function cerrarLocal(motivo) {
+  ses = null;
+  localStorage.removeItem(K.ses);
+  $("lError").textContent = motivo || "";
+  mostrar();
+}
+
+// ------------------------------------------------------------
+//  Configuración
+// ------------------------------------------------------------
+$("cfgGuardar").addEventListener("click", async () => {
+  const url = $("cfgUrl").value.trim();
+  $("cfgError").textContent = "";
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url) && !/^http:\/\/localhost[:\/]/.test(url)) {
+    $("cfgError").textContent = "La dirección debe empezar con https://script.google.com/macros/s/ y terminar en /exec.";
+    return;
+  }
+  const btn = $("cfgGuardar");
+  ocupado(btn, true, "Probando conexión…");
+  try {
+    const d = await api("ping", {}, url);
+    if (!String(d.version || "").startsWith("8")) throw new ErrorApi("Ese servidor tiene una versión anterior. Instala el script v8.");
+    cfg = { url }; guardar(K.cfg, cfg);
+    toast("Conectado al servidor.");
+    mostrar();
+  } catch (e) {
+    $("cfgError").textContent = e.message;
+  } finally { ocupado(btn, false); }
+});
+
+$("lCambiarServidor").addEventListener("click", () => {
+  ["pLogin"].forEach(id => $(id).hidden = true);
+  $("cfgUrl").value = cfg.url; $("cfgVolver").hidden = false; $("pConfig").hidden = false;
+});
+document.querySelector('[data-ir="login"]').addEventListener("click", () => { $("pConfig").hidden = true; mostrar(); });
+
+// ------------------------------------------------------------
+//  Iniciar sesión
+// ------------------------------------------------------------
+$("fLogin").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  $("lError").textContent = "";
+  const btn = $("lEntrar");
+  ocupado(btn, true, "Entrando…");
+  try {
+    const d = await api("login", {
+      usuario: $("lUsuario").value.trim(), password: $("lPass").value,
+      dispositivo: (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ""
+    });
+    ses = { token: d.token, expira: d.expira, usuario: d.usuario, contadores: d.contadores || {} };
+    guardar(K.ses, ses);
+    $("lPass").value = "";
+    vistaActual = "inicio";
+    mostrar();
+  } catch (e) {
+    $("lError").textContent = e.codigo === "SIN_RED" ? "Para entrar la primera vez se necesita internet." : e.message;
+  } finally { ocupado(btn, false); }
+});
+
+// ------------------------------------------------------------
+//  Cambiar contraseña (obligatorio la primera vez o voluntario)
+// ------------------------------------------------------------
+function abrirCambio(obligatorio) {
+  ["pConfig", "pLogin", "pApp"].forEach(id => $(id).hidden = true);
+  $("fCambio").reset(); $("cError").textContent = "";
+  $("cTitulo").firstChild.textContent = obligatorio ? "Crea tu contraseña" : "Cambiar contraseña";
+  $("cSub").textContent = obligatorio ? "Es tu primer acceso" : (ses.usuario.nombre || "");
+  $("cTexto").hidden = !obligatorio;
+  $("cActualLbl").textContent = obligatorio ? "Contraseña temporal" : "Contraseña actual";
+  $("cCancelar").textContent = obligatorio ? "Salir" : "Cancelar";
+  $("cCancelar").onclick = () => obligatorio ? salir() : mostrar();
+  $("pCambio").hidden = false;
+  $("cActual").focus();
+}
+
+$("fCambio").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  $("cError").textContent = "";
+  if ($("cNueva").value !== $("cNueva2").value) { $("cError").textContent = "Las contraseñas nuevas no coinciden."; return; }
+  const btn = $("cGuardar");
+  ocupado(btn, true, "Guardando…");
+  try {
+    const d = await api("cambiarPassword", { actual: $("cActual").value, nueva: $("cNueva").value });
+    ses.usuario = d.usuario; ses.contadores = d.contadores || {};
+    guardar(K.ses, ses);
+    toast("Contraseña guardada.");
+    mostrar();
+  } catch (e) { $("cError").textContent = e.message; }
+  finally { ocupado(btn, false); }
+});
+
+// ------------------------------------------------------------
+//  Cuenta
+// ------------------------------------------------------------
+$("btnCuenta").addEventListener("click", () => {
+  const m = $("menuCuenta"); m.hidden = !m.hidden;
+  $("btnCuenta").setAttribute("aria-expanded", String(!m.hidden));
+});
+document.addEventListener("click", e => {
+  if (!e.target.closest("#menuCuenta") && !e.target.closest("#btnCuenta")) $("menuCuenta").hidden = true;
+});
+$("mCambiar").addEventListener("click", () => {
+  $("menuCuenta").hidden = true;
+  if (!navigator.onLine) { toast("Para cambiar tu contraseña se necesita internet."); return; }
+  abrirCambio(false);
+});
+$("mSalir").addEventListener("click", async () => {
+  $("menuCuenta").hidden = true;
+  if (await confirmar("Cerrar sesión", "Para volver a entrar necesitarás tu usuario, tu contraseña e internet.", "Cerrar sesión")) salir();
+});
+
+async function salir() {
+  try { if (navigator.onLine && ses) await api("logout"); } catch (e) { }
+  cerrarLocal("");
+}
+
+// ------------------------------------------------------------
+//  App
+// ------------------------------------------------------------
+function pintarApp() {
+  const u = ses.usuario;
+  $("btnCuenta").textContent = u.nombre.split(/\s+/)[0] + " ▾";
+  const pest = [["inicio", "Inicio"]];
+  if (u.rol === "direccion") pest.push(["usuarios", "Usuarios"], ["historial", "Reportes anteriores"], ["bitacora", "Bitácora"]);
+  if (!pest.some(p => p[0] === vistaActual)) vistaActual = "inicio";
+  $("pestanas").innerHTML = pest.map(([id, t]) =>
+    `<button role="tab" data-vista="${id}" aria-selected="${id === vistaActual}">${t}</button>`).join("");
+  $("pestanas").hidden = pest.length < 2;
+  $("pestanas").querySelectorAll("button").forEach(b => b.onclick = () => irA(b.dataset.vista));
+  irA(vistaActual);
+  pintarRed();
+}
+
+function irA(vista) {
+  vistaActual = vista;
+  $("pestanas").querySelectorAll("button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.vista === vista)));
+  ["inicio", "usuarios", "historial", "bitacora"].forEach(v => $("v" + v[0].toUpperCase() + v.slice(1)).hidden = v !== vista);
+  ({ inicio: pintarInicio, usuarios: cargarUsuarios, historial: cargarHistorial, bitacora: cargarBitacora })[vista]();
+}
+
+function pintarInicio() {
+  const u = ses.usuario, rol = ROLES[u.rol];
+  const cont = ses.contadores || {};
+  const prefijos = Object.keys(cont).sort();
+  const ejemplo = `${u.iniciales}1A${rol.sep}00001`;
+  const filas = prefijos.map(p => `<tr><td data-t="Grado y grupo">${esc(p.slice(u.iniciales.length))}</td><td data-t="Último folio"><b>${esc(p + rol.sep + String(cont[p]).padStart(5, "0"))}</b></td></tr>`).join("");
+  $("vInicio").innerHTML = `
+    ${u.activo === false ? `<div class="aviso"><b>Tu usuario fue dado de baja.</b> Puedes entregar lo que capturaste antes, pero ya no consultar información.</div>` : ""}
+    <div class="credencial" style="--color-area:${rol.color}">
+      <div class="sello"><b>${esc(u.iniciales)}</b><span>tus folios</span></div>
+      <div>
+        <h1>${esc(u.nombre)}</h1>
+        <div class="area">${esc(rol.etiqueta)}</div>
+        <div class="ejemplo">Tus folios se ven así: ${esc(ejemplo)}</div>
+      </div>
+    </div>
+    ${u.rol === "direccion" ? `
+      <div class="bloque">
+        <h2>Administración</h2>
+        <p>Desde aquí das de alta al personal, asignas los reportes que se capturaron antes con las terminales v7 y revisas quién ha entrado al sistema.</p>
+        <p class="ayuda">La consulta de reportes, expedientes y notas llega en la siguiente etapa. Mientras tanto, la Terminal de Dirección v7 sigue funcionando como siempre.</p>
+      </div>` : `
+      <div class="bloque">
+        <h2>Tus folios</h2>
+        ${prefijos.length ? `<p>Último folio que usaste en cada grupo. El siguiente reporte continuará desde aquí, aunque no tengas internet.</p>
+          <table class="tabla"><thead><tr><th>Grado y grupo</th><th>Último folio</th></tr></thead><tbody>${filas}</tbody></table>`
+        : `<p class="vacio">Aún no tienes reportes. Tu primer folio en cada grupo será el 00001.</p>`}
+        <p class="ayuda">La captura de reportes llega en la siguiente etapa. Mientras tanto, sigue usando tu terminal v7.</p>
+      </div>`}
+  `;
+}
+
+function pintarRed() {
+  const e = $("estadoRed");
+  e.textContent = navigator.onLine ? "En línea" : "Sin conexión";
+  e.classList.toggle("fuera", !navigator.onLine);
+}
+window.addEventListener("online", () => { pintarRed(); refrescarSesion(); });
+window.addEventListener("offline", pintarRed);
+
+// Al abrir con internet, confirma que la sesión sigue vigente y actualiza los contadores.
+async function refrescarSesion() {
+  if (!ses || !navigator.onLine) return;
+  try {
+    const d = await api("sesion");
+    ses.usuario = d.usuario; ses.contadores = d.contadores || {};
+    guardar(K.ses, ses);
+    if (!$("pApp").hidden) { if (ses.usuario.debeCambiar) mostrar(); else if (vistaActual === "inicio") pintarInicio(); }
+  } catch (e) { /* sin red o sesión cerrada: api() ya se encargó */ }
+}
+
+// ------------------------------------------------------------
+//  Dirección: usuarios
+// ------------------------------------------------------------
+function sinRedHtml(texto) {
+  return `<div class="bloque"><p class="vacio">${esc(texto || "Esta sección necesita internet. Conéctate e inténtalo de nuevo.")}</p></div>`;
+}
+
+async function cargarUsuarios() {
+  const v = $("vUsuarios");
+  v.innerHTML = `<div class="bloque"><p class="vacio">Cargando usuarios…</p></div>`;
+  try {
+    usuariosCache = (await api("listarUsuarios")).usuarios;
+    pintarUsuarios();
+  } catch (e) { v.innerHTML = sinRedHtml(e.message); }
+}
+
+function estadoUsuario(u) {
+  if (!u.activo) return `<span class="etiqueta e-baja">Baja</span>`;
+  if (u.debeCambiar) return `<span class="etiqueta e-temporal">Sin primer acceso</span>`;
+  return `<span class="etiqueta" style="color:var(--ok)">Activo</span>`;
+}
+
+function fechaCorta(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? "—" : d.toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function pintarUsuarios() {
+  const orden = { direccion: 0, prefectura: 1, gabinete: 2 };
+  const lista = usuariosCache.slice().sort((a, b) => (b.activo - a.activo) || (orden[a.rol] - orden[b.rol]) || a.nombre.localeCompare(b.nombre));
+  $("vUsuarios").innerHTML = `
+    <div class="bloque">
+      <div class="encabezado"><h2>Usuarios</h2><button class="btn" id="btnNuevo">Agregar usuario</button></div>
+      <table class="tabla">
+        <thead><tr><th>Nombre</th><th>Usuario</th><th>Iniciales</th><th>Área</th><th>Estado</th><th>Último acceso</th><th></th></tr></thead>
+        <tbody>${lista.map(u => `
+          <tr class="${u.activo ? "" : "inactivo"}">
+            <td><b>${esc(u.nombre)}</b></td>
+            <td data-t="Usuario">${esc(u.usuario)}</td>
+            <td data-t="Iniciales" class="ini">${esc(u.iniciales)}</td>
+            <td><span class="etiqueta r-${esc(u.rol)}">${esc((ROLES[u.rol] || {}).etiqueta || u.rol)}</span></td>
+            <td>${estadoUsuario(u)}</td>
+            <td data-t="Último acceso">${fechaCorta(u.ultimoAcceso)}</td>
+            <td><div class="acciones">
+              <button class="btn sec chico" data-editar="${esc(u.usuario)}">Editar</button>
+              ${u.activo ? `<button class="btn sec chico" data-reset="${esc(u.usuario)}">Nueva contraseña</button>` : ""}
+              <button class="btn sec chico" data-activo="${esc(u.usuario)}">${u.activo ? "Dar de baja" : "Reactivar"}</button>
+            </div></td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  $("btnNuevo").onclick = () => abrirUsuario(null);
+  $("vUsuarios").querySelectorAll("[data-editar]").forEach(b => b.onclick = () => abrirUsuario(b.dataset.editar));
+  $("vUsuarios").querySelectorAll("[data-reset]").forEach(b => b.onclick = () => restablecer(b.dataset.reset));
+  $("vUsuarios").querySelectorAll("[data-activo]").forEach(b => b.onclick = () => cambiarActivo(b.dataset.activo));
+}
+
+const sinAcentos = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function inicialesSugeridas(nombre) {
+  const p = sinAcentos(nombre).toUpperCase().replace(/[^A-ZÑ ]/g, "").split(/\s+/).filter(Boolean);
+  if (!p.length) return "";
+  return p.length === 1 ? p[0].slice(0, 2) : p[0][0] + p[p.length - 1][0];
+}
+function usuarioSugerido(nombre) {
+  const p = sinAcentos(nombre).toLowerCase().replace(/[^a-z ]/g, "").split(/\s+/).filter(Boolean);
+  if (!p.length) return "";
+  return p.length === 1 ? p[0] : p[0] + "." + p[p.length - 1];
+}
+
+let editando = null, tocadoUsuario = false, tocadoIniciales = false;
+function abrirUsuario(usuario) {
+  editando = usuario ? usuariosCache.find(u => u.usuario === usuario) : null;
+  $("fUsuario").reset(); $("duError").textContent = "";
+  tocadoUsuario = tocadoIniciales = !!editando;
+  $("duTitulo").textContent = editando ? "Editar usuario" : "Agregar usuario";
+  $("duGuardar").textContent = editando ? "Guardar cambios" : "Agregar usuario";
+  $("duUsuario").disabled = !!editando;
+  if (editando) {
+    $("duNombre").value = editando.nombre; $("duUsuario").value = editando.usuario;
+    $("duIniciales").value = editando.iniciales; $("duRol").value = editando.rol;
+  }
+  revisarIniciales();
+  $("dUsuario").showModal();
+  $("duNombre").focus();
+}
+
+$("duNombre").addEventListener("input", () => {
+  if (!tocadoUsuario) $("duUsuario").value = usuarioSugerido($("duNombre").value);
+  if (!tocadoIniciales) $("duIniciales").value = inicialesSugeridas($("duNombre").value);
+  revisarIniciales();
+});
+$("duUsuario").addEventListener("input", () => { tocadoUsuario = true; });
+$("duIniciales").addEventListener("input", () => { tocadoIniciales = true; revisarIniciales(); });
+
+function revisarIniciales() {
+  const ini = sinAcentos($("duIniciales").value).toUpperCase().trim();
+  const otro = usuariosCache.find(u => u.iniciales === ini && (!editando || u.usuario !== editando.usuario));
+  const ayuda = $("duInicialesAyuda");
+  if (otro) {
+    const partes = sinAcentos($("duNombre").value).toUpperCase().split(/\s+/).filter(Boolean);
+    const extra = ((partes[partes.length - 1] || "")[1] || "A").replace(/[^A-Z]/, "A");
+    ayuda.innerHTML = `<span style="color:var(--alerta);font-weight:600">${esc(ini)} ya son de ${esc(otro.nombre)}.</span> Agrega una letra, por ejemplo ${esc(ini.slice(0, 3) + extra)}.`;
+  } else if (editando && ini !== editando.iniciales) {
+    ayuda.textContent = "Al cambiar las iniciales, solo sus reportes nuevos usarán las nuevas. Los anteriores conservan su folio.";
+  } else {
+    ayuda.textContent = "2 a 4 letras. No se pueden repetir entre usuarios.";
+  }
+  return !otro;
+}
+
+document.querySelectorAll("[data-cerrar]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+
+$("fUsuario").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  $("duError").textContent = "";
+  if (!revisarIniciales()) { $("duError").textContent = "Esas iniciales ya están en uso."; return; }
+  const datos = {
+    nombre: $("duNombre").value.trim(), usuario: $("duUsuario").value.trim().toLowerCase(),
+    iniciales: sinAcentos($("duIniciales").value).toUpperCase().trim(), rol: $("duRol").value
+  };
+  const btn = $("duGuardar");
+  ocupado(btn, true, "Guardando…");
+  try {
+    if (editando) {
+      await api("actualizarUsuario", { usuario: editando.usuario, nombre: datos.nombre, iniciales: datos.iniciales, rol: datos.rol });
+      $("dUsuario").close(); toast("Cambios guardados.");
+    } else {
+      const d = await api("crearUsuario", datos);
+      $("dUsuario").close();
+      mostrarTemporal("Usuario creado", d.usuario, d.passwordTemporal);
+    }
+    cargarUsuarios();
+  } catch (e) { $("duError").textContent = e.message; }
+  finally { ocupado(btn, false); }
+});
+
+function urlApp() { return location.href.split("#")[0].split("?")[0]; }
+function mostrarTemporal(titulo, u, pass) {
+  $("dtTitulo").textContent = titulo;
+  $("dtDatos").innerHTML = `${esc(u.nombre)}<br>Usuario: <b>${esc(u.usuario)}</b><br>Contraseña temporal: <b>${esc(pass)}</b>`;
+  $("dtCopiar").onclick = async () => {
+    const texto = `Reportes SEJ\nEntra en: ${urlApp()}\nUsuario: ${u.usuario}\nContraseña temporal: ${pass}\nAl entrar se te pedirá crear tu propia contraseña.`;
+    try { await navigator.clipboard.writeText(texto); toast("Datos copiados."); }
+    catch (e) { toast("No se pudo copiar; anótalos a mano."); }
+  };
+  $("dTemporal").showModal();
+}
+
+async function restablecer(usuario) {
+  const u = usuariosCache.find(x => x.usuario === usuario);
+  if (!await confirmar("Nueva contraseña", `Se creará una contraseña temporal para ${u.nombre} y se cerrarán sus sesiones abiertas en todos sus aparatos. Lo que tenga sin enviar se conserva y podrá enviarlo al volver a entrar.`, "Crear contraseña temporal")) return;
+  try {
+    const d = await api("restablecerPassword", { usuario });
+    mostrarTemporal("Contraseña restablecida", u, d.passwordTemporal);
+    cargarUsuarios();
+  } catch (e) { toast(e.message); }
+}
+
+async function cambiarActivo(usuario) {
+  const u = usuariosCache.find(x => x.usuario === usuario);
+  const baja = u.activo;
+  const ok = await confirmar(baja ? "Dar de baja" : "Reactivar",
+    baja ? `${u.nombre} ya no podrá consultar nada en el sistema. Los reportes que capturó antes de hoy sí se recibirán si aún no los envía. Sus reportes en la nube no se borran.`
+         : `${u.nombre} podrá volver a entrar con su contraseña.`,
+    baja ? "Dar de baja" : "Reactivar", baja);
+  if (!ok) return;
+  try {
+    await api("actualizarUsuario", { usuario, activo: !baja });
+    toast(baja ? "Usuario dado de baja." : "Usuario reactivado.");
+    cargarUsuarios();
+  } catch (e) { toast(e.message); }
+}
+
+// ------------------------------------------------------------
+//  Dirección: reportes anteriores (v6/v7) sin usuario
+// ------------------------------------------------------------
+async function cargarHistorial() {
+  const v = $("vHistorial");
+  v.innerHTML = `<div class="bloque"><p class="vacio">Buscando reportes anteriores…</p></div>`;
+  try {
+    const [h, us] = await Promise.all([api("historialSinAsignar"), api("listarUsuarios")]);
+    usuariosCache = us.usuarios;
+    const pend = h.pendientes;
+    const opciones = sel => `<option value="">Elegir usuario…</option>` + usuariosCache
+      .map(u => `<option value="${esc(u.usuario)}" ${u.usuario === sel ? "selected" : ""}>${esc(u.nombre)} (${esc(u.iniciales)})</option>`).join("");
+    v.innerHTML = `
+      <div class="bloque">
+        <h2>Reportes anteriores sin asignar</h2>
+        <p>Son reportes capturados con las terminales v7. Asígnalos a la persona que los hizo para que sus notas de seguimiento le lleguen y su numeración continúe sin repetir folios.</p>
+        ${pend.length ? `<table class="tabla"><thead><tr><th>Capturó</th><th>Hoja</th><th>Reportes</th><th>Asignar a</th><th></th></tr></thead><tbody>
+          ${pend.map((p, i) => `<tr>
+            <td><b>${esc(p.nombre)}</b>${p.sugerido ? `<div class="ayuda">Coincide con un usuario</div>` : ""}</td>
+            <td data-t="Hoja">${p.hoja === "ReportesDireccion" ? "Dirección" : "Prefectura y Gabinete"}</td>
+            <td data-t="Reportes">${p.reportes}</td>
+            <td><select data-sel="${i}" aria-label="Asignar reportes de ${esc(p.nombre)}">${opciones(p.sugerido)}</select></td>
+            <td><div class="acciones"><button class="btn chico" data-asignar="${i}">Asignar</button></div></td>
+          </tr>`).join("")}</tbody></table>`
+        : `<p class="vacio">Todos los reportes anteriores ya tienen usuario.</p>`}
+      </div>`;
+    v.querySelectorAll("[data-asignar]").forEach(b => b.onclick = async () => {
+      const p = pend[b.dataset.asignar];
+      const usuario = v.querySelector(`[data-sel="${b.dataset.asignar}"]`).value;
+      if (!usuario) { toast("Elige a qué usuario asignarlos."); return; }
+      const u = usuariosCache.find(x => x.usuario === usuario);
+      if (!await confirmar("Asignar reportes", `Los ${p.reportes} reportes capturados por “${p.nombre}” quedarán a nombre de ${u.nombre}. Esto no se puede deshacer desde la app.`, "Asignar")) return;
+      try {
+        const d = await api("asignarHistorial", { hoja: p.hoja, nombre: p.nombre, usuario });
+        toast(`${d.asignados} reportes asignados a ${u.nombre}.`);
+        cargarHistorial();
+      } catch (e) { toast(e.message); }
+    });
+  } catch (e) { v.innerHTML = sinRedHtml(e.message); }
+}
+
+// ------------------------------------------------------------
+//  Dirección: bitácora
+// ------------------------------------------------------------
+async function cargarBitacora() {
+  const v = $("vBitacora");
+  v.innerHTML = `<div class="bloque"><p class="vacio">Cargando…</p></div>`;
+  try {
+    const ev = (await api("leerBitacora")).eventos;
+    v.innerHTML = `<div class="bloque"><h2>Bitácora</h2><p class="ayuda">Accesos y cambios de usuarios, del más reciente al más antiguo.</p>
+      ${ev.length ? `<ul class="lista-bitacora">${ev.map(e => `<li><b>${esc(e.usuario)}</b> ${esc((ACCIONES_BITACORA[e.accion] || e.accion).toLowerCase())}${e.detalle ? `: ${esc(e.detalle)}` : ""}<br><small>${fechaCorta(e.fecha)}</small></li>`).join("")}</ul>`
+      : `<p class="vacio">Sin movimientos todavía.</p>`}</div>`;
+  } catch (e) { v.innerHTML = sinRedHtml(e.message); }
+}
+
+// ------------------------------------------------------------
+//  Confirmación
+// ------------------------------------------------------------
+function confirmar(titulo, texto, si, peligro) {
+  return new Promise(res => {
+    $("dcTitulo").textContent = titulo; $("dcTexto").textContent = texto; $("dcSi").textContent = si;
+    $("dcSi").className = "btn" + (peligro ? " peligro" : "");
+    const d = $("dConfirmar");
+    const fin = v => { d.close(); res(v); };
+    $("dcSi").onclick = () => fin(true); $("dcNo").onclick = () => fin(false);
+    d.oncancel = () => res(false);
+    d.showModal();
+  });
+}
+
+// ------------------------------------------------------------
+//  Arranque
+// ------------------------------------------------------------
+if (ses && !sesionVigente(ses)) { ses = null; localStorage.removeItem(K.ses); $("lError").textContent = "Tu sesión venció. Inicia sesión de nuevo."; }
+mostrar();
+refrescarSesion();
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => { });
+</script>
+</body>
+</html>
