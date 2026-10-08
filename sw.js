@@ -1,10 +1,19 @@
 // Reportes SEJ — funciona sin conexión.
 // La app se guarda en el aparato; las peticiones al servidor nunca se guardan.
-const CACHE = "reportes-sej-v8-2a";
-const ARCHIVOS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
+const CACHE = "reportes-sej-v8-2b";
+const ARCHIVOS = ["./", "./index.html", "./captura.html", "./direccion.html", "./v8-base.js", "./manifest.webmanifest", "./icon.svg"];
+// Diseño de las terminales (se guardan para funcionar sin conexión)
+const EXTERNOS = [
+  "https://cdn.tailwindcss.com",
+  "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+];
+const HOSTS_EXTERNOS = ["cdn.tailwindcss.com", "cdnjs.cloudflare.com", "fonts.googleapis.com", "fonts.gstatic.com"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(async c => {
+    await c.addAll(ARCHIVOS);
+    await Promise.all(EXTERNOS.map(u => fetch(u, { mode: "no-cors" }).then(r => c.put(u, r)).catch(() => { })));
+  }).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -16,16 +25,30 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const req = e.request;
   const url = new URL(req.url);
-  if (req.method !== "GET" || url.origin !== location.origin) return; // servidor: siempre en línea
+  if (req.method !== "GET") return;
+  if (HOSTS_EXTERNOS.includes(url.hostname)) {
+    // Diseño externo: usa lo guardado y lo actualiza cuando hay internet
+    e.respondWith(caches.open(CACHE).then(c => c.match(req, { ignoreVary: true }).then(g => {
+      const red = fetch(req).then(r => { c.put(req, r.clone()); return r; }).catch(() => g);
+      return g || red;
+    })));
+    return;
+  }
+  if (url.origin !== location.origin) return; // servidor de la escuela: siempre en línea
 
   if (req.mode === "navigate") {
     // Página: primero la versión nueva; si no hay internet, la guardada.
     e.respondWith(fetch(req).then(r => {
       const copia = r.clone();
-      caches.open(CACHE).then(c => c.put("./index.html", copia));
+      caches.open(CACHE).then(c => c.put(req, copia));
       return r;
-    }).catch(() => caches.match("./index.html")));
+    }).catch(() => caches.match(req, { ignoreSearch: true }).then(g => g || caches.match("./index.html"))));
     return;
   }
-  e.respondWith(caches.match(req).then(g => g || fetch(req)));
+  // Archivos propios: primero la versión nueva; sin internet, la guardada.
+  e.respondWith(fetch(req).then(r => {
+    const copia = r.clone();
+    caches.open(CACHE).then(c => c.put(req, copia));
+    return r;
+  }).catch(() => caches.match(req)));
 });

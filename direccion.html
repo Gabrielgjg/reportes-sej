@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dirección · Reportes SEJ</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <script src="v8-base.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap');
+        
+        body {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .document-font {
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* Modo impresión de expediente */
+            body.print-expediente #printArea {
+                display: none !important;
+            }
+            body.print-expediente #expedientePrint,
+            body.print-expediente #expedientePrint * {
+                visibility: visible;
+            }
+            body.print-expediente #expedientePrint {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 1.2cm 1.5cm;
+            }
+        }
+        #expedientePrint {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <header class="bg-gradient-to-r from-blue-950 to-slate-900 text-white shadow-md no-print border-b-2 border-yellow-500">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-yellow-500 rounded-lg text-slate-950 font-bold text-xl">
+                    <i class="fa-solid fa-folder-tree"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Sistema de Formatos y Reportes - Dirección</h1>
+                    <p class="text-xs text-slate-300">Consolidación de Prefecturas y Casos de Dirección • SEJ</p>
+                </div>
+            </div>
+            <div class="bg-slate-800 px-3 py-1.5 rounded text-xs border border-slate-700">
+                <i class="fa-solid fa-server text-yellow-500 mr-1.5"></i> Módulo Dirección Central
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-5 flex flex-col space-y-4 no-print">
+                
+                <div class="flex bg-slate-200 p-1 rounded-lg">
+                    <button id="btnTabForm" onclick="switchTab('form')" class="flex-1 py-2 text-xs font-bold rounded-md transition-all bg-white text-indigo-950 shadow-sm">
+                        <i class="fa-solid fa-pen-to-square mr-1"></i> Captura Dirección
+                    </button>
+                    <button id="btnTabHistory" onclick="switchTab('history')" class="flex-1 py-2 text-xs font-bold rounded-md transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-box-archive mr-1"></i> Control Subdirección
+                    </button>
+                </div>
+
+                <div id="tabForm" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col space-y-4">
+
+                    <!-- Identificación del directivo (firma de reportes y notas) -->
+                    <div class="bg-slate-100 p-3 rounded-lg border border-slate-200 space-y-1">
+                        <label for="directivoName" class="block text-[10px] font-bold text-slate-800 uppercase tracking-wide"><i class="fa-solid fa-id-card-clip mr-1 text-slate-600"></i> Quien captura</label>
+                        <input type="text" id="directivoName" readonly tabindex="-1" class="cursor-default w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 shadow-xs">
+                    </div>
+
+                    <!-- Aviso: reporte guardado en consulta (no se edita) -->
+                    <div id="bannerConsulta" class="hidden bg-amber-50 border border-amber-300 rounded-lg p-3 text-[11px] text-amber-900 space-y-2">
+                        <p><i class="fa-solid fa-lock mr-1"></i> Estás consultando el reporte guardado con folio <strong id="bannerConsultaFolio" class="font-mono"></strong>. Lo que cambies aquí no modifica el original; para añadir información, agrega una nota de seguimiento.</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="abrirSeguimiento(reporteAbiertoFolio)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-comment-medical"></i> Agregar seguimiento
+                            </button>
+                            <button onclick="cerrarConsulta()" class="px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-file-circle-plus"></i> Capturar reporte nuevo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-indigo-600"></i> Parámetros de Registro
+                        </h2>
+                        <div class="bg-amber-50 text-amber-800 px-2 py-1 rounded text-xs font-mono font-bold border border-amber-200 shadow-xs">
+                            Folio Sugerido: <span id="lblFormFolio" class="text-red-700">--</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">1. Seleccionar Formato Oficial</label>
+                        <select id="formatSelector" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium text-slate-700">
+                            <option value="leve">Reporte de Incidencia LEVE (Bitácora)</option>
+                            <option value="moderada">Reporte de Incidencia MODERADA (Aviso y Compromiso)</option>
+                            <option value="grave" selected>Acta de Hechos - Incidencia GRAVE (Protocolo SEJ)</option>
+                            <option value="citatorio">Citatorio Oficial a Padre / Madre o Tutor</option>
+                            <option value="omision">Reporte por Omitir Tareas o Actitudes (NEM)</option>
+                            <option value="otro">Otro (Formato Libre / Personalizado)</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+                        <div class="col-span-2">
+                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">Nombre de la Escuela Secundaria</label>
+                            <input type="text" id="schoolName" value="Secundaria General No. 39" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">CCT</label>
+                            <input type="text" id="schoolCct" value="14DEST0059Z" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">Turno</label>
+                            <select id="schoolTurn" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                                <option value="Matutino">Matutino</option>
+                                <option value="Vespertino">Vespertino</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase border-b pb-1">2. Datos del Estudiante</label>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Nombre Completo del Alumno(a)</label>
+                            <div class="relative">
+                                <input type="text" id="studentName" value="Ángel Gabriel Mendoza Ríos" class="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 pl-8">
+                                <i class="fa-solid fa-user absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-0.5">Grado</label>
+                                <select id="studentGrade" onchange="calculateNextDirectionFolio()" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                                    <option value="1°">1°</option>
+                                    <option value="2°" selected>2°</option>
+                                    <option value="3°">3°</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-0.5">Grupo</label>
+                                <input type="text" id="studentGroup" value="C" oninput="calculateNextDirectionFolio()" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs text-center uppercase focus:ring-1 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 mb-0.5">Fecha Suceso</label>
+                                <input type="date" id="eventDate" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Padre, Madre o Tutor</label>
+                            <input type="text" id="tutorName" value="Sra. Martha Elena Ríos Sánchez" class="w-full bg-white border border-slate-300 rounded px-3 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="block text-xs font-semibold text-slate-600 uppercase border-b pb-1">3. Relación de Hechos y Medidas</label>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Hechos Frecuentes (Autocompletar)</label>
+                            <select id="presetHechos" class="w-full bg-slate-50 border border-slate-200 text-xs rounded px-2.5 py-1.5 text-slate-600">
+                                <option value="">-- Selecciona una opción para autocompletar --</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Descripción Detallada (Hechos objetivos, sin juicios)</label>
+                            <textarea id="eventDescription" rows="3" class="w-full bg-white border border-slate-300 rounded p-2 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Redacte de forma neutral..."></textarea>
+                        </div>
+
+                        <div id="additionalFieldsArea"></div>
+                    </div>
+
+                    <div class="pt-3 border-t flex flex-col space-y-2">
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="resetFields()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+                                <i class="fa-solid fa-trash-can"></i> Limpiar Datos
+                            </button>
+                            <button onclick="saveReport()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-colors">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Reporte
+                            </button>
+                        </div>
+                        <button onclick="window.print()" class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-colors">
+                            <i class="fa-solid fa-print"></i> Imprimir Reporte Actual
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tabHistory" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col space-y-4 hidden">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-database text-blue-600"></i> Historial Centralizado
+                        </h2>
+                    </div>
+
+                    <div class="relative">
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 uppercase">Buscar Alumno</label>
+                        <div class="relative">
+                            <input type="text" id="searchName" oninput="renderHistory()" placeholder="Nombre del alumno (con o sin acentos)..." class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none pl-8 text-slate-700 font-medium">
+                            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5 uppercase">Origen / Grado</label>
+                            <select id="filterGrade" onchange="renderHistory()" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="Todos">Todos los Registros</option>
+                                <option value="1°">1° de Secundaria</option>
+                                <option value="2°">2° de Secundaria</option>
+                                <option value="3°">3° de Secundaria</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5 uppercase">Filtrar Grupo</label>
+                            <input type="text" id="filterGroup" oninput="renderHistory()" placeholder="Ej: C" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none uppercase text-center">
+                        </div>
+                    </div>
+
+                    <div id="historyListContainer" class="space-y-4 max-h-[260px] overflow-y-auto pr-1">
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200 space-y-3">
+                        <div class="bg-blue-50 border border-blue-200 p-2 rounded-lg text-[10px] text-blue-950 flex items-start gap-2">
+                            <i class="fa-solid fa-circle-info text-blue-600 text-xs mt-0.5"></i>
+                            <span><strong>Consolidación:</strong> Los folios de prefectura llevan guion (<span class="font-mono">GG1C-00001</span>) y los de Dirección terminan en X más cinco dígitos (<span class="font-mono">LH1CX00001</span>). Sincronizar envía los reportes y notas de este equipo y descarga los de prefectura, Dirección y las notas de todas las áreas.</span>
+                        </div>
+                        
+                        <!-- SINCRONIZACIÓN AUTOMÁTICA CON NUBE -->
+                        <button onclick="sincronizarDesdeNube()" class="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-2 transition-colors shadow-sm">
+                            <i class="fa-solid fa-arrows-rotate"></i> Sincronizar con la nube (enviar y recibir)
+                        </button>
+                        <div id="syncStatus" class="text-[10px] text-center text-slate-400 hidden"></div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="downloadBackup()" class="w-full px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 transition-colors">
+                                <i class="fa-solid fa-file-arrow-down"></i> Exportar Todo
+                            </button>
+                            
+                        </div>
+
+                        <button onclick="resetSchoolCycle()" class="w-full px-3 py-2 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 transition-colors">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Reiniciar Ciclo Completo
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-7 flex justify-center">
+                <div id="printArea" class="w-[21cm] min-h-[29.7cm] bg-white p-[1.8cm] shadow-md border border-slate-200 flex flex-col justify-between text-black relative document-font leading-relaxed text-sm">
+                    
+                    <div class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none no-print">
+                        <i class="fa-solid fa-graduation-cap text-[15rem] text-slate-900"></i>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-start border-b border-black pb-3 mb-6">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-12 h-12 bg-slate-100 border border-slate-400 rounded flex items-center justify-center font-serif text-lg font-bold text-slate-800">
+                                    SEJ
+                                </div>
+                                <div class="text-left">
+                                    <div class="text-[11px] font-bold uppercase tracking-wider leading-tight">Secretaría de Educación del Estado de Jalisco</div>
+                                    <div class="text-[9px] text-slate-600 tracking-wide">Dirección General de Educación Secundaria General</div>
+                                    <div class="text-[9px] text-slate-600 tracking-wide font-semibold" id="prevSchoolHead">Secundaria General No. 39</div>
+                                </div>
+                            </div>
+                            <div class="text-right text-[10px] text-slate-600">
+                                <div class="font-bold text-[11px] font-mono text-indigo-900">FOLIO: <span id="prevFolio">--</span></div>
+                                <div class="font-bold">Ciclo Escolar 2025 - 2026</div>
+                                <div id="prevCct">CCT: 14DEST0059Z</div>
+                                <div id="prevTurn">Turno: Matutino</div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mb-6">
+                            <h3 id="prevDocTitle" class="text-sm font-bold uppercase tracking-wider text-black underline">Reporte de Incidencia Escolar</h3>
+                            <p class="text-[10px] italic text-slate-600 mt-1" id="prevDocSubtitle">Marco Local de Convivencia Escolar para el Estado de Jalisco</p>
+                        </div>
+
+                        <div class="grid grid-cols-12 gap-y-2 border border-black p-3 bg-slate-50/50 text-xs mb-5">
+                            <div class="col-span-8 font-semibold">Alumno(a): <span id="prevStudentName" class="font-normal border-b border-dashed border-slate-400 px-1">Ángel Gabriel Mendoza Ríos</span></div>
+                            <div class="col-span-4 font-semibold text-right">Grado y Grupo: <span id="prevGradeGroup" class="font-normal border-b border-dashed border-slate-400 px-1">2° - C</span></div>
+                            
+                            <div class="col-span-7 font-semibold">Tutor Autorizado: <span id="prevTutorName" class="font-normal border-b border-dashed border-slate-400 px-1">Sra. Martha Elena Ríos Sánchez</span></div>
+                            <div class="col-span-5 font-semibold text-right">Fecha de Registro: <span id="prevDate" class="font-normal border-b border-dashed border-slate-400 px-1">16 de Junio de 2026</span></div>
+                        </div>
+
+                        <div class="space-y-4 text-justify text-xs text-slate-900 leading-relaxed">
+                            <p id="prevDocIntro">
+                                Por medio de la presente, se hace constar el reporte circunstanciado de los hechos suscitados dentro del espacio escolar de conformidad con las Reglas de Conducta vigentes en las Escuelas de Educación Básica en Jalisco.
+                            </p>
+
+                            <div class="border-l-2 border-black pl-3 my-3 italic text-slate-800 bg-slate-50 py-1.5" id="prevDescription">
+                                "El alumno omitió entregar las actividades correspondientes a los últimos dos proyectos formativos."
+                            </div>
+
+                            <div id="prevDynamicContent" class="space-y-3"></div>
+                            
+                            <div class="bg-slate-50 p-2.5 rounded border border-slate-200 mt-4 text-[10px] leading-snug text-slate-600" id="legalFooterText">
+                                * Este reporte se integra al expediente individual del alumno como parte del proceso de evaluación formativa y de inclusión que promueve la Nueva Escuela Mexicana...
+                            </div>
+
+                            <!-- Notas de seguimiento del reporte consultado -->
+                            <div id="prevSeguimientos" class="hidden border border-black p-2.5 mt-4 text-[11px] leading-snug">
+                                <div class="font-bold uppercase text-[10px] tracking-wide mb-1.5">Seguimiento del caso</div>
+                                <div id="prevSeguimientosLista" class="space-y-1.5"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-8 border-t border-slate-200">
+                        <div class="grid grid-cols-3 gap-4 text-center text-[10px]">
+                            <div class="flex flex-col justify-end h-16">
+                                <div class="border-t border-black pt-1">Prof. <span class="docNameSignature">Dirección Escolar</span></div>
+                                <div class="text-slate-500">Firma de Autoridad</div>
+                            </div>
+                            <div class="flex flex-col justify-end h-16" id="signatureMiddleCol">
+                                <div class="border-t border-black pt-1">Sra. Martha Elena Ríos</div>
+                                <div class="text-slate-500">Firma del Padre o Tutor</div>
+                            </div>
+                            <div class="flex flex-col justify-end h-16">
+                                <div class="border-t border-black pt-1">Sello Institucional</div>
+                                <div class="text-slate-500">Validación del Plantel</div>
+                            </div>
+                        </div>
+                        <div class="text-[8px] text-slate-400 text-center mt-6">
+                            Documento de uso institucional unificado para la integración de expedientes de Dirección Escolar.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const presets = {
+            leve: [
+                { text: "Uso de lenguaje coloquial inapropiado o interrupciones constantes durante la dinámica del proyecto escolar.", action: "Diálogo reflexivo con el estudiante, compromiso verbal y registro en la bitácora individual." },
+                { text: "No portar los materiales necesarios requeridos de forma consensuada para el trabajo comunitario en el aula.", action: "Acuerdo colaborativo para la reposición de actividades bajo modelo socioformativo." },
+                { text: "Hacer uso del teléfono celular u otros dispositivos distractores dentro de la sesión de clases sin autorización docente.", action: "Resguardo del dispositivo en dirección conforme al reglamento interno de convivencia." }
+            ],
+            moderada: [
+                { text: "Incumplimiento reiterado de las normas de convivencia grupal o faltas de respeto verbal leves dirigidas a compañeros de grupo.", action: "Amonestación por escrito con envío de reporte al padre de familia y firma de compromiso de sana convivencia." },
+                { text: "Retirarse del aula o área de trabajo designada durante el periodo escolar sin contar con el permiso explícito del docente titular.", action: "Diálogo formativo con orientación académica y requerimiento de apoyo coordinado con prefectura." },
+                { text: "Daño accidental menor a la infraestructura o mobiliario escolar derivado de conductas de juego rudo no permitido.", action: "Firma de acuerdo restaurativo para la reparación física del material con participación directa del alumno." }
+            ],
+            grave: [
+                { text: "Presunto acto de acoso escolar físico o agresión directa a un compañero dentro de las instalaciones en el cambio de módulo.", action: "Activación inmediata del Protocolo Estatal de Violencia Escolar SEJ, levantando acta circunstanciada de hechos y aviso a tutor." },
+                { text: "Consumo de sustancias no permitidas o portación de artículos peligrosos que atentan contra la seguridad del plantel escolar.", action: "Suspensión temporal formativa basada en el Marco de Convivencia SEJ, canalización para apoyo psicosocial y junta con directivos." },
+                { text: "Uso de redes sociales para la difamación, ciberacoso u hostigamiento sistemático dirigido a miembros de la comunidad escolar.", action: "Cita urgente con padres de familia, elaboración de compromiso de no agresión y canalización con psicopedagogía." }
+            ],
+            citatorio: [
+                { text: "Abordar el desempeño académico y el semáforo de riesgo de rezago escolar en el que se encuentra el estudiante de forma actual.", action: "Establecer estrategias coordinadas de estudio guiado en casa y acompañamiento en proyectos formativos." },
+                { text: "Dar seguimiento directo a las medidas disciplinarias formativas derivadas de un reporte de incidencia moderada previa.", action: "Firma formal de bitácora institucional y acuerdo de corresponsabilidad educativa con el tutor." }
+            ],
+            omision: [
+                { text: "Omisión consecutiva en la entrega de avances de los proyectos integradores y tareas para evaluar procesos formativos.", action: "Plan de recuperación de aprendizajes para entrega prioritaria en 3 días hábiles bajo seguimiento paterno." },
+                { text: "Ausentismo recurrente injustificado a las actividades prácticas escolares afectando la dinámica de evaluación grupal.", action: "Compromiso familiar de regularizar la asistencia continua del alumno bajo apercibimiento administrativo." }
+            ],
+            otro: []
+        };
+
+        const formatSelector = document.getElementById('formatSelector');
+        const schoolName = document.getElementById('schoolName');
+        const schoolCct = document.getElementById('schoolCct');
+        const schoolTurn = document.getElementById('schoolTurn');
+        const studentName = document.getElementById('studentName');
+        const studentGrade = document.getElementById('studentGrade');
+        const studentGroup = document.getElementById('studentGroup');
+        const eventDate = document.getElementById('eventDate');
+        const tutorName = document.getElementById('tutorName');
+        const presetHechos = document.getElementById('presetHechos');
+        const eventDescription = document.getElementById('eventDescription');
+        const additionalFieldsArea = document.getElementById('additionalFieldsArea');
+
+        const prevSchoolHead = document.getElementById('prevSchoolHead');
+        const prevCct = document.getElementById('prevCct');
+        const prevTurn = document.getElementById('prevTurn');
+        const prevDocTitle = document.getElementById('prevDocTitle');
+        const prevDocSubtitle = document.getElementById('prevDocSubtitle');
+        const prevStudentName = document.getElementById('prevStudentName');
+        const prevGradeGroup = document.getElementById('prevGradeGroup');
+        const prevTutorName = document.getElementById('prevTutorName');
+        const prevDate = document.getElementById('prevDate');
+        const prevDescription = document.getElementById('prevDescription');
+        const prevDynamicContent = document.getElementById('prevDynamicContent');
+        const legalFooterText = document.getElementById('legalFooterText');
+        const signatureMiddleCol = document.getElementById('signatureMiddleCol');
+
+        let currentCalculatedFolio = "";
+
+        const today = new Date().toISOString().split('T')[0];
+        eventDate.value = today;
+
+        // -------------------------------------------------------
+        //  SINCRONIZACIÓN CON GOOGLE SHEETS — Weird Games Mx
+        //  Pega aquí la URL de tu Apps Script desplegado
+        // -------------------------------------------------------
+        const SCRIPT_URL = SEJ.cfg.url;
+        document.getElementById('directivoName').value = SEJ.usuario.nombre;
+
+        // ---------- Utilidades de Dirección ----------
+        const DIR_SYNC_KEY = 'sej_dir_synced_folios';
+        const DIR_NAME_KEY = 'sej_directivo_name';
+
+        function getIniciales(nombreCompleto) {
+            return SEJ.usuario.iniciales;
+            if (!nombreCompleto) return "XX";
+            const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
+            if (partes.length === 0) return "XX";
+            if (partes.length === 1) return partes[0].substring(0, 2).toUpperCase();
+            return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+        }
+
+        // Folio de Dirección: sin guion y terminado en X + 5 dígitos (ej. LH1CX00001 o el antiguo 1CX00001)
+        function esFolioDireccion(folio) {
+            const f = String(folio || '');
+            return !f.includes('-') && /X\d{5}$/.test(f);
+        }
+
+        function getNombreDirectivo() { return SEJ.usuario.nombre; }
+        function guardarNombreDirectivo() {
+            try { localStorage.setItem(DIR_NAME_KEY, getNombreDirectivo()); } catch (e) { }
+        }
+
+        function getFoliosDirSincronizados() {
+            try { return JSON.parse(localStorage.getItem(DIR_SYNC_KEY)) || []; } catch (e) { return []; }
+        }
+        function marcarFoliosDirSincronizados(folios) {
+            const set = new Set(getFoliosDirSincronizados());
+            folios.forEach(f => set.add(String(f)));
+            localStorage.setItem(DIR_SYNC_KEY, JSON.stringify([...set]));
+        }
+
+        // Envía un reporte de Dirección. Devuelve { estado: "ok" | "error" | "rechazado", folio, folioAnterior, mensaje }
+        async function enviarReporteDireccion(reporte) {
+            try {
+                const d = await SEJ.api('guardarReporte', { reporte: Object.assign({}, reporte, { capturado: new Date(Number(reporte.id)).toISOString() }) });
+                if (d.folio && d.folio !== reporte.folio) {
+                    const viejo = reporte.folio;
+                    const hist = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+                    hist.forEach(r => { if (r.id === reporte.id) { r.folio = d.folio; r.folioProvisional = viejo; } });
+                    localStorage.setItem('sej_reports_history', JSON.stringify(hist));
+                    const notas = getSeguimientos(); notas.forEach(n => { if (String(n.folio) === viejo) n.folio = d.folio; }); setSeguimientos(notas);
+                    reporte.folio = d.folio;
+                    marcarFoliosDirSincronizados([d.folio]); SEJ.registrarFolio(d.folio);
+                    return { estado: 'ok', folio: d.folio, folioAnterior: viejo };
+                }
+                marcarFoliosDirSincronizados([d.folio]); SEJ.registrarFolio(d.folio);
+                return { estado: 'ok', folio: d.folio, folioAnterior: '' };
+            } catch (e) {
+                if (e.codigo === 'SIN_RED') return { estado: 'error' };
+                return { estado: 'rechazado', mensaje: e.message };
+            }
+        }
+
+        function normalizarReportesNube(lista) {
+            return (lista || []).map(x => {
+                const id = Number(x.id);
+                return Object.assign({}, x, {
+                    folio: x.folio !== undefined && x.folio !== null ? String(x.folio) : "",
+                    id: Number.isFinite(id) && id > 0 ? id : Date.now() + Math.floor(Math.random() * 100000)
+                });
+            });
+        }
+
+        // Sincronización completa: envía lo pendiente de este equipo y descarga todo
+        async function sincronizarDesdeNube() {
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.classList.remove('hidden');
+            if (!navigator.onLine) {
+                statusEl.textContent = "📴 Sin conexión. Conéctate a internet para sincronizar.";
+                setTimeout(() => statusEl.classList.add('hidden'), 6000);
+                return;
+            }
+            try {
+                const historial = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+                const yaEnviados = getFoliosDirSincronizados();
+                const pendientesDir = historial.filter(r => esFolioDireccion(r.folio) && !yaEnviados.includes(String(r.folio)));
+                let enviadosDir = 0; const rechazados = [], renumerados = [];
+                if (pendientesDir.length) statusEl.textContent = `⬆️ Enviando ${pendientesDir.length} reporte(s) de Dirección...`;
+                for (const rep of pendientesDir) {
+                    const folioOriginal = rep.folio;
+                    const res = await enviarReporteDireccion(rep);
+                    if (res.estado === 'ok') { enviadosDir++; if (res.folioAnterior) renumerados.push(res); }
+                    else if (res.estado === 'rechazado') rechazados.push(`${folioOriginal}: ${res.mensaje}`);
+                    else throw new Error("no se pudieron enviar los reportes de Dirección");
+                }
+
+                statusEl.textContent = "⬆️ Enviando notas de seguimiento...";
+                const notas = await enviarSeguimientosPendientes();
+
+                statusEl.textContent = "⏳ Descargando reportes...";
+                const todo = await SEJ.api('leerTodo');
+                const dePrefectura = normalizarReportesNube(todo.reportes);
+                const deDireccion = normalizarReportesNube(todo.reportesDireccion);
+                marcarFoliosDirSincronizados(deDireccion.map(r => r.folio).filter(Boolean));
+
+                let currentHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+                let nuevos = 0;
+                [...dePrefectura, ...deDireccion].forEach(newReport => {
+                    const idx = currentHistory.findIndex(existing =>
+                        (existing.folio && newReport.folio && String(existing.folio) === newReport.folio));
+                    if (idx < 0) { currentHistory.push(newReport); nuevos++; }
+                    else currentHistory[idx] = Object.assign({}, currentHistory[idx], newReport, { id: currentHistory[idx].id });
+                });
+                localStorage.setItem('sej_reports_history', JSON.stringify(currentHistory));
+
+                statusEl.textContent = "⬇️ Descargando notas de seguimiento...";
+                const notasNuevas = await descargarSeguimientos(false, todo.seguimientos);
+                SEJ.actualizarContadores().then(() => calculateNextDirectionFolio()).catch(() => {});
+
+                renderHistory();
+                refrescarSeguimientosPreview();
+
+                statusEl.textContent = `✅ Listo: ${enviadosDir} reporte(s) enviado(s), ${nuevos} reporte(s) nuevo(s), ${notas.enviados} nota(s) enviada(s), ${notasNuevas} nota(s) recibida(s).`
+                    + (notas.pendientes ? ` Quedaron ${notas.pendientes} nota(s) sin enviar.` : '');
+                if (renumerados.length) alert('Estos reportes cambiaron de folio:\n\n' + renumerados.map(x => `${x.folioAnterior}  →  ${x.folio}`).join('\n') + '\n\nSi ya los imprimiste, reimprímelos.');
+                if (rechazados.length) alert(`Estos reportes no se pudieron enviar:\n\n${rechazados.join('\n')}`);
+                setTimeout(() => statusEl.classList.add('hidden'), 8000);
+            } catch (err) {
+                const msg = String(err.message || '').replace(/\.+$/, '');
+                statusEl.textContent = `❌ ${msg}. Revisa tu conexión e intenta de nuevo.`;
+                setTimeout(() => statusEl.classList.add('hidden'), 8000);
+            }
+        }
+
+        function switchTab(tab) {
+            const btnForm = document.getElementById('btnTabForm');
+            const btnHistory = document.getElementById('btnTabHistory');
+            const tabForm = document.getElementById('tabForm');
+            const tabHistory = document.getElementById('tabHistory');
+
+            if (tab === 'form') {
+                btnForm.className = "flex-1 py-2 text-xs font-bold rounded-md transition-all bg-white text-indigo-950 shadow-sm";
+                btnHistory.className = "flex-1 py-2 text-xs font-bold rounded-md transition-all text-slate-600 hover:text-slate-900";
+                tabForm.classList.remove('hidden');
+                tabHistory.classList.add('hidden');
+                calculateNextDirectionFolio();
+            } else {
+                btnHistory.className = "flex-1 py-2 text-xs font-bold rounded-md transition-all bg-white text-indigo-950 shadow-sm";
+                btnForm.className = "flex-1 py-2 text-xs font-bold rounded-md transition-all text-slate-600 hover:text-slate-900";
+                tabForm.classList.add('hidden');
+                tabHistory.classList.remove('hidden');
+                renderHistory();
+            }
+        }
+
+        // Folios de Dirección: iniciales del directivo + grado + grupo + X + consecutivo (ej: LH1CX00001)
+        function calculateNextDirectionFolio() {
+            if (reporteAbiertoFolio) {
+                currentCalculatedFolio = reporteAbiertoFolio;
+                document.getElementById('lblFormFolio').innerText = reporteAbiertoFolio;
+                const pf = document.getElementById('prevFolio');
+                if (pf) pf.innerText = reporteAbiertoFolio;
+                return;
+            }
+
+            const gradeVal = studentGrade.value.replace(/[^0-9]/g, '');
+            const groupVal = studentGroup.value.toUpperCase().trim();
+
+            if (!gradeVal || !groupVal) {
+                document.getElementById('lblFormFolio').innerText = "--";
+                return;
+            }
+
+            const prefix = `${getIniciales(getNombreDirectivo())}${gradeVal}${groupVal}X`;
+            const desdeNube = SEJ.contador(prefix.slice(0, -1));
+            const rawHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+
+            let maxNum = 0;
+            rawHistory.forEach(item => {
+                const f = String(item.folio || '');
+                if (esFolioDireccion(f) && f.startsWith(prefix) && f.length === prefix.length + 5) {
+                    const numPart = parseInt(f.slice(-5), 10);
+                    if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart;
+                }
+            });
+
+            maxNum = Math.max(maxNum, desdeNube);
+            currentCalculatedFolio = `${prefix}${String(maxNum + 1).padStart(5, '0')}`;
+
+            document.getElementById('lblFormFolio').innerText = currentCalculatedFolio;
+            const prevFolioEl = document.getElementById('prevFolio');
+            if (prevFolioEl) prevFolioEl.innerText = currentCalculatedFolio;
+        }
+
+        function updateFormType() {
+            const format = formatSelector.value;
+            presetHechos.innerHTML = '<option value="">-- Selecciona una opción para autocompletar --</option>';
+            presets[format].forEach((item, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = item.text.substring(0, 75) + "...";
+                presetHechos.appendChild(opt);
+            });
+
+            additionalFieldsArea.innerHTML = '';
+
+            if (format === 'leve' || format === 'moderada') {
+                prevDocTitle.innerText = `Reporte de Incidencia ${format.toUpperCase()}`;
+                prevDocSubtitle.innerText = "Marco Local de Convivencia Escolar para el Estado de Jalisco";
+                prevDocIntro.innerText = `Por medio de la presente, se asienta en el archivo central de dirección el reporte catalogado como ${format.toUpperCase()}, de conformidad con el artículo 17 de las Reglas de Conducta Escolar de Jalisco.`;
+                
+                additionalFieldsArea.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Medida Disciplinaria / Formativa Aplicada</label>
+                        <input type="text" id="actionApplied" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Acuerdo formativo establecido en dirección.">
+                    </div>
+                `;
+            } else if (format === 'grave') {
+                prevDocTitle.innerText = "Acta de Hechos (Incidencia Grave)";
+                prevDocSubtitle.innerText = "Protocolo de Actuación Escolar SEJ - Edición Vigente";
+                prevDocIntro.innerText = "Se constituye el presente documento oficial en la Dirección del plantel para dejar constancia circunstanciada y detallada de los hechos graves presentados, a fin de salvaguardar la integridad de la comunidad escolar.";
+                
+                additionalFieldsArea.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Hora de los Hechos</label>
+                            <input type="time" id="eventTime" value="10:30" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">¿Hubo Testigos?</label>
+                            <input type="text" id="witnesses" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Nombres de docentes o alumnos">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Plan de Intervención Psicosocial Inmediato</label>
+                        <textarea id="interventionPlan" rows="2" class="w-full bg-white border border-slate-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Junta urgente coordinada por Dirección con tutores legales y canalización externa."></textarea>
+                    </div>
+                `;
+            } else if (format === 'citatorio') {
+                prevDocTitle.innerText = "Citatorio Oficial para Padres de Familia";
+                prevDocSubtitle.innerText = "Secretaría de Educación del Estado de Jalisco";
+                prevDocIntro.innerText = "Estimado Padre, Madre de familia o Tutor. Por medio del presente, se le convoca a comparecer en las oficinas de la Dirección del plantel escolar a fin de tratar asuntos relacionados con el desarrollo socioemocional y conducta de su representado.";
+
+                additionalFieldsArea.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Fecha de la Cita</label>
+                            <input type="date" id="appointmentDate" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Hora de la Cita</label>
+                            <input type="time" id="appointmentTime" value="08:00" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                `;
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                document.getElementById('appointmentDate').value = tomorrow.toISOString().split('T')[0];
+
+            } else if (format === 'omision') {
+                prevDocTitle.innerText = "Aviso de Omisión de Actividades y Corresponsabilidad";
+                prevDocSubtitle.innerText = "Nueva Escuela Mexicana - Alerta de Rezago Temprano";
+                prevDocIntro.innerText = "El presente reporte emitido por dirección tiene como finalidad el establecimiento de un canal directo con los tutores legales, informando de omisiones importantes que afectan el desempeño formativo ordinario.";
+
+                additionalFieldsArea.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Actividades/Tareas Faltantes</label>
+                        <input type="text" id="missingTasks" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Firmas de avances de proyectos integradores.">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Compromiso solicitado al Tutor en Casa</label>
+                        <input type="text" id="tutorAgreement" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Acompañamiento académico supervisado.">
+                    </div>
+                `;
+            } else if (format === 'otro') {
+                prevDocTitle.innerText = "Documento Oficial";
+                prevDocSubtitle.innerText = "Dirección Escolar";
+                prevDocIntro.innerText = "Por medio del presente documento se deja constancia de la situación descrita a continuación, en apego a los principios de la Nueva Escuela Mexicana y el Marco de Convivencia Escolar de Jalisco.";
+
+                additionalFieldsArea.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Título del Documento</label>
+                        <input type="text" id="customTitle" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Constancia de Buena Conducta">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Subtítulo / Fundamento (opcional)</label>
+                        <input type="text" id="customSubtitle" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Dirección Escolar">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Contenido Adicional (opcional)</label>
+                        <textarea id="customContent" rows="2" class="w-full bg-white border border-slate-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Texto adicional a incluir en el cuerpo del documento..."></textarea>
+                    </div>
+                `;
+            }
+
+            attachDynamicListeners();
+            calculateNextDirectionFolio();
+            updatePreview();
+        }
+
+        presetHechos.addEventListener('change', () => {
+            const format = formatSelector.value;
+            const index = presetHechos.value;
+            if (index !== "") {
+                eventDescription.value = presets[format][index].text;
+                
+                if (format === 'leve' || format === 'moderada') {
+                    const actInput = document.getElementById('actionApplied');
+                    if (actInput) actInput.value = presets[format][index].action;
+                } else if (format === 'grave') {
+                    const planInput = document.getElementById('interventionPlan');
+                    if (planInput) planInput.value = presets[format][index].action;
+                } else if (format === 'omision') {
+                    const taskInput = document.getElementById('missingTasks');
+                    if (taskInput) taskInput.value = presets[format][index].text.substring(0, 50) + " (Reportado por Dirección)";
+                    const agreeInput = document.getElementById('tutorAgreement');
+                    if (agreeInput) agreeInput.value = presets[format][index].action;
+                } else if (format === 'citatorio') {
+                    eventDescription.value = "Se solicita su presencia para: " + presets[format][index].text;
+                }
+            }
+            updatePreview();
+        });
+
+        function updatePreview() {
+            prevSchoolHead.innerText = schoolName.value;
+            prevCct.innerText = "CCT: " + schoolCct.value;
+            prevTurn.innerText = "Turno: " + schoolTurn.value;
+
+            prevStudentName.innerText = studentName.value;
+            prevGradeGroup.innerText = `${studentGrade.value} - ${studentGroup.value.toUpperCase()}`;
+            prevTutorName.innerText = tutorName.value;
+            
+            document.getElementById('prevFolio').innerText = currentCalculatedFolio || "--";
+
+            signatureMiddleCol.innerHTML = `
+                <div class="border-t border-black pt-1">${escHTML(tutorName.value)}</div>
+                <div class="text-slate-500">Firma del Padre o Tutor</div>
+            `;
+
+            const rawDate = eventDate.value;
+            if (rawDate) {
+                const dateObj = new Date(rawDate + "T00:00:00");
+                prevDate.innerText = dateObj.toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+
+            prevDescription.innerText = `"${eventDescription.value || '[Sin descripción de hechos]'}"`;
+
+            const format = formatSelector.value;
+            prevDynamicContent.innerHTML = '';
+
+            if (format === 'leve' || format === 'moderada') {
+                const actionVal = document.getElementById('actionApplied')?.value || '[Pendiente de registrar]';
+                prevDynamicContent.innerHTML = `
+                    <p class="font-semibold text-slate-900">Medida de Consecuencia Formativa Establecida:</p>
+                    <div class="bg-amber-50 p-2.5 rounded border border-amber-200">${escHTML(actionVal)}</div>
+                `;
+                legalFooterText.innerText = "* Formato sustentado en los artículos 17, 18 y 20 de las Reglas de Conducta para las Escuelas de Educación Básica del Estado de Jalisco...";
+            } else if (format === 'grave') {
+                const timeVal = document.getElementById('eventTime')?.value || '10:30';
+                const witnessVal = document.getElementById('witnesses')?.value || 'Ninguno';
+                const planVal = document.getElementById('interventionPlan')?.value || '[Pendiente de registrar]';
+
+                prevDynamicContent.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 text-[11px] border-y py-2 border-slate-300">
+                        <div><strong>Hora de Registro:</strong> ${escHTML(timeVal)} hrs.</div>
+                        <div><strong>Testigos de Actuación:</strong> ${escHTML(witnessVal)}</div>
+                    </div>
+                    <div class="mt-2">
+                        <p class="font-semibold text-slate-900">Plan Inmediato de Contención y Acuerdos de Dirección:</p>
+                        <div class="bg-red-50 p-2.5 rounded border border-red-200 text-slate-800 italic">${escHTML(planVal)}</div>
+                    </div>
+                `;
+                legalFooterText.innerText = "* Reporte unificado oficial conforme al Protocolo de Detección, Prevención y Actuación en Casos de Violencia Escolar de la SEJ...";
+            } else if (format === 'citatorio') {
+                const appDateRaw = document.getElementById('appointmentDate')?.value;
+                const appTime = document.getElementById('appointmentTime')?.value || '08:00';
+                let appDateFormatted = '[Sin fecha]';
+                if (appDateRaw) {
+                    const dateObj = new Date(appDateRaw + "T00:00:00");
+                    appDateFormatted = dateObj.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                }
+
+                prevDynamicContent.innerHTML = `
+                    <div class="bg-slate-50 p-3 rounded border border-slate-300 my-4 text-center">
+                        <p class="text-xs uppercase font-bold tracking-wider text-slate-900">Comparecencia Presencial Obligatoria</p>
+                        <p class="text-sm font-semibold mt-1">Día: <span class="underline">${escHTML(appDateFormatted)}</span></p>
+                        <p class="text-sm font-semibold">Hora de Atención: <span class="underline">${escHTML(appTime)} horas</span></p>
+                    </div>
+                `;
+                legalFooterText.innerText = "* Se solicita puntual asistencia. En caso de inasistencia se asentará la omisión en el expediente unificado.";
+            } else if (format === 'omision') {
+                const missingVal = document.getElementById('missingTasks')?.value || '[No detallado]';
+                const agreeVal = document.getElementById('tutorAgreement')?.value || '[No detallado]';
+
+                prevDynamicContent.innerHTML = `
+                    <div class="space-y-2">
+                        <div>
+                            <strong class="text-slate-900 block">Detalle de Omisiones Acumuladas en Prefectura:</strong>
+                            <div class="bg-amber-50 p-2 rounded text-amber-900 border border-amber-200">${escHTML(missingVal)}</div>
+                        </div>
+                        <div>
+                            <strong class="text-slate-900 block">Acuerdos de Co-Responsabilidad Solicitados:</strong>
+                            <div class="bg-blue-50 p-2 rounded text-blue-900 border border-blue-200">${escHTML(agreeVal)}</div>
+                        </div>
+                    </div>
+                `;
+                legalFooterText.innerText = "* Fundamentado en el Marco Legal de la Nueva Escuela Mexicana y la Ley General de Educación...";
+            } else if (format === 'otro') {
+                const customTitleVal = document.getElementById('customTitle')?.value.trim() || 'Documento Oficial';
+                const customSubtitleVal = document.getElementById('customSubtitle')?.value.trim() || 'Dirección Escolar';
+                const customContentVal = document.getElementById('customContent')?.value.trim() || '';
+
+                prevDocTitle.innerText = customTitleVal;
+                prevDocSubtitle.innerText = customSubtitleVal;
+
+                prevDynamicContent.innerHTML = customContentVal
+                    ? `
+                        <p class="font-semibold text-slate-900">Información Adicional:</p>
+                        <div class="bg-slate-50 p-2.5 rounded border border-slate-200 whitespace-pre-wrap">${escHTML(customContentVal)}</div>
+                    `
+                    : '';
+                legalFooterText.innerText = "* Documento de formato libre para atender situaciones no contempladas en los formatos oficiales predeterminados.";
+            }
+        }
+
+        const allInputs = [schoolName, schoolCct, schoolTurn, studentName, studentGrade, studentGroup, eventDate, tutorName, eventDescription];
+        allInputs.forEach(input => {
+            input.addEventListener('input', updatePreview);
+            input.addEventListener('change', updatePreview);
+        });
+
+        formatSelector.addEventListener('change', updateFormType);
+
+        function attachDynamicListeners() {
+            const dynamicFields = ['actionApplied', 'eventTime', 'witnesses', 'interventionPlan', 'appointmentDate', 'appointmentTime', 'missingTasks', 'tutorAgreement', 'customTitle', 'customSubtitle', 'customContent'];
+            dynamicFields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', updatePreview);
+                    el.addEventListener('change', updatePreview);
+                }
+            });
+        }
+
+        function resetFields() {
+            reporteAbiertoFolio = null;
+            mostrarBannerConsulta();
+            refrescarSeguimientosPreview();
+            eventDescription.value = '';
+            presetHechos.value = '';
+            const inputsToReset = ['actionApplied', 'interventionPlan', 'missingTasks', 'tutorAgreement'];
+            inputsToReset.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            calculateNextDirectionFolio();
+            updatePreview();
+        }
+
+        // --- MANEJO DE HISTORIAL COLECTIVO ---
+        
+        function saveReport() {
+            if (!studentName.value.trim() || !eventDescription.value.trim()) {
+                alert("Asigne el nombre del alumno y descripción de hechos.");
+                return;
+            }
+
+            if (reporteAbiertoFolio) {
+                const nuevo = confirm(`Estás consultando el reporte ${reporteAbiertoFolio}, que ya está guardado y no se puede modificar.\n\n¿Guardar lo que ves como un reporte NUEVO de Dirección con otro folio?\n\n(Para añadir información al reporte original, cancela y usa "Agregar seguimiento".)`);
+                if (!nuevo) return;
+                reporteAbiertoFolio = null;
+                mostrarBannerConsulta();
+                refrescarSeguimientosPreview();
+            }
+
+            calculateNextDirectionFolio();
+
+            const report = {
+                id: Date.now(),
+                folio: currentCalculatedFolio, // Formato Dirección (ej: LH1CX00001)
+                directivo: getNombreDirectivo(),
+                format: formatSelector.value,
+                schoolName: schoolName.value,
+                schoolCct: schoolCct.value,
+                schoolTurn: schoolTurn.value,
+                studentName: studentName.value,
+                studentGrade: studentGrade.value,
+                studentGroup: studentGroup.value.toUpperCase().trim(),
+                eventDate: eventDate.value,
+                tutorName: tutorName.value,
+                eventDescription: eventDescription.value,
+                actionApplied: document.getElementById('actionApplied')?.value || '',
+                eventTime: document.getElementById('eventTime')?.value || '',
+                witnesses: document.getElementById('witnesses')?.value || '',
+                interventionPlan: document.getElementById('interventionPlan')?.value || '',
+                appointmentDate: document.getElementById('appointmentDate')?.value || '',
+                appointmentTime: document.getElementById('appointmentTime')?.value || '',
+                missingTasks: document.getElementById('missingTasks')?.value || '',
+                tutorAgreement: document.getElementById('tutorAgreement')?.value || '',
+                customTitle: document.getElementById('customTitle')?.value || '',
+                customSubtitle: document.getElementById('customSubtitle')?.value || '',
+                customContent: document.getElementById('customContent')?.value || ''
+            };
+
+            let internalHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+            internalHistory.push(report);
+            localStorage.setItem('sej_reports_history', JSON.stringify(internalHistory));
+            SEJ.registrarFolio(report.folio);
+
+            alert(`Reporte guardado con éxito por Dirección. Folio: ${currentCalculatedFolio}`);
+
+            // Envío inmediato a la nube; si falla, se reintenta al sincronizar
+            if (navigator.onLine) enviarReporteDireccion(report).then(res => {
+                if (res.estado === 'ok' && res.folioAnterior) alert(`El reporte quedó con folio ${res.folio} (antes ${res.folioAnterior}). Si ya lo imprimiste, reimprímelo.`);
+                if (res.estado === 'rechazado') alert(`El reporte ${report.folio} no se pudo enviar: ${res.mensaje}\n\nQuedó guardado en este equipo.`);
+                calculateNextDirectionFolio(); renderHistory();
+            });
+
+            resetFields();
+            renderHistory();
+        }
+
+        function cleanText(text) {
+            return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyListContainer');
+            const fGrade = document.getElementById('filterGrade').value;
+            const fGroup = document.getElementById('filterGroup').value.toUpperCase().trim();
+            const sName = cleanText(document.getElementById('searchName').value.trim());
+            
+            container.innerHTML = '';
+            let rawHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+
+            if (rawHistory.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">La base de datos unificada está vacía.</p>`;
+                return;
+            }
+
+            let filtered = rawHistory.filter(item => {
+                const matchGrade = (fGrade === 'Todos' || item.studentGrade === fGrade);
+                const matchGroup = (fGroup === '' || item.studentGroup.includes(fGroup));
+                const matchSearchName = sName === '' || cleanText(item.studentName).includes(sName);
+                return matchGrade && matchGroup && matchSearchName;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Ningún registro coincide con los filtros especificados.</p>`;
+                return;
+            }
+
+            const groups = {};
+            filtered.forEach(report => {
+                const origenRep = esFolioDireccion(report.folio) ? 'Dirección'
+                    : (report.area === 'Gabinete psicopedagógico' ? 'Gabinete' : 'Prefectura');
+                const categoryKey = `${origenRep} - ${report.studentGrade} Grado "${report.studentGroup}"`;
+                
+                if (!groups[categoryKey]) groups[categoryKey] = [];
+                groups[categoryKey].push(report);
+            });
+
+            for (const [title, reports] of Object.entries(groups)) {
+                const headerBg = title.startsWith("Dirección") ? "bg-slate-900 border-red-500"
+                    : title.startsWith("Gabinete") ? "bg-teal-800 border-teal-300"
+                    : "bg-slate-700 border-yellow-500";
+                
+                const categorySection = document.createElement('div');
+                categorySection.className = "space-y-1.5";
+                categorySection.innerHTML = `
+                    <div class="${headerBg} border-l-4 px-2 py-1 text-[11px] font-bold text-white flex justify-between items-center">
+                        <span><i class="fa-solid fa-folder-tree text-yellow-400 mr-1"></i> ${escHTML(title)}</span>
+                        <span class="bg-slate-600 text-white text-[10px] px-1.5 py-0.2 rounded font-mono">${reports.length}</span>
+                    </div>
+                `;
+
+                const cardsContainer = document.createElement('div');
+                cardsContainer.className = "grid grid-cols-1 gap-2 pl-1";
+
+                reports.forEach(rep => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white border border-slate-200 rounded-lg p-2.5 shadow-xs flex flex-col justify-between space-y-2";
+                    
+                    const formatsMeta = { leve: "Leve", moderada: "Moderada", grave: "Grave", citatorio: "Citatorio", omision: "NEM Omisión", otro: "Otro" };
+                    const badgeColors = { leve: "bg-slate-100 text-slate-800", moderada: "bg-amber-100 text-amber-800", grave: "bg-red-100 text-red-800", citatorio: "bg-blue-100 text-blue-800", omision: "bg-purple-100 text-purple-800", otro: "bg-teal-100 text-teal-800" };
+                    const cardFolio = rep.folio ? rep.folio : "--";
+                    const numNotas = rep.folio ? seguimientosDeFolio(rep.folio).length : 0;
+                    const autorRep = rep.directivo || rep.prefecto || '';
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex justify-between items-start">
+                                <h4 class="text-xs font-bold text-slate-900 truncate max-w-[180px]">${escHTML(rep.studentName)}</h4>
+                                <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded ${badgeColors[rep.format]}">${formatsMeta[rep.format]}</span>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-slate-400 font-medium mt-0.5">
+                                <span><i class="fa-regular fa-calendar"></i> ${escHTML(String(rep.eventDate || '').slice(0, 10))}</span>
+                                <span class="font-mono font-bold text-indigo-700">Folio: ${escHTML(cardFolio)}</span>
+                            </div>
+                            ${autorRep ? `<div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-user-pen"></i> ${escHTML(autorRep)}</div>` : ''}
+                            <p class="text-[11px] text-slate-600 line-clamp-2 italic mt-1">"${escHTML(rep.eventDescription)}"</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100 justify-end">
+                            <button onclick="deleteReport(${rep.id})" class="text-[10px] text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            <button onclick="abrirSeguimiento('${escHTML(rep.folio || '')}')" class="text-[10px] bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-white font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-comment-medical"></i> Seguimiento${numNotas ? ` (${numNotas})` : ''}
+                            </button>
+                            <button onclick="loadReportToPreview(${rep.id})" class="text-[10px] bg-slate-100 text-slate-800 hover:bg-slate-800 hover:text-white font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-eye"></i> Cargar Caso
+                            </button>
+                            <button onclick="abrirExpediente(this.dataset.nombre)" data-nombre="${escHTML(rep.studentName)}" class="text-[10px] bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-folder-open"></i> Expediente
+                            </button>
+                        </div>
+                    `;
+                    cardsContainer.appendChild(card);
+                });
+
+                categorySection.appendChild(cardsContainer);
+                container.appendChild(categorySection);
+            }
+        }
+
+        function loadReportToPreview(id) {
+            let rawHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+            const rep = rawHistory.find(item => item.id === id);
+            if (!rep) return;
+
+            formatSelector.value = rep.format;
+            schoolName.value = rep.schoolName;
+            schoolCct.value = rep.schoolCct;
+            schoolTurn.value = rep.schoolTurn;
+            studentName.value = rep.studentName;
+            studentGrade.value = rep.studentGrade;
+            studentGroup.value = rep.studentGroup;
+            eventDate.value = rep.eventDate;
+            tutorName.value = rep.tutorName;
+            eventDescription.value = rep.eventDescription;
+            reporteAbiertoFolio = rep.folio ? String(rep.folio) : null;
+            currentCalculatedFolio = rep.folio || "";
+
+            updateFormType();
+
+            setTimeout(() => {
+                if (rep.format === 'leve' || rep.format === 'moderada') {
+                    if (document.getElementById('actionApplied')) document.getElementById('actionApplied').value = rep.actionApplied;
+                } else if (rep.format === 'grave') {
+                    if (document.getElementById('eventTime')) document.getElementById('eventTime').value = rep.eventTime;
+                    if (document.getElementById('witnesses')) document.getElementById('witnesses').value = rep.witnesses;
+                    if (document.getElementById('interventionPlan')) document.getElementById('interventionPlan').value = rep.interventionPlan;
+                } else if (rep.format === 'citatorio') {
+                    if (document.getElementById('appointmentDate')) document.getElementById('appointmentDate').value = rep.appointmentDate;
+                    if (document.getElementById('appointmentTime')) document.getElementById('appointmentTime').value = rep.appointmentTime;
+                } else if (rep.format === 'omision') {
+                    if (document.getElementById('missingTasks')) document.getElementById('missingTasks').value = rep.missingTasks;
+                    if (document.getElementById('tutorAgreement')) document.getElementById('tutorAgreement').value = rep.tutorAgreement;
+                } else if (rep.format === 'otro') {
+                    if (document.getElementById('customTitle')) document.getElementById('customTitle').value = rep.customTitle || '';
+                    if (document.getElementById('customSubtitle')) document.getElementById('customSubtitle').value = rep.customSubtitle || '';
+                    if (document.getElementById('customContent')) document.getElementById('customContent').value = rep.customContent || '';
+                }
+                currentCalculatedFolio = rep.folio || "";
+                document.getElementById('lblFormFolio').innerText = currentCalculatedFolio || "--";
+                updatePreview();
+                switchTab('form');
+                mostrarBannerConsulta();
+                refrescarSeguimientosPreview();
+            }, 50);
+        }
+
+        function deleteReport(id) {
+            let rawHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+            const rep = rawHistory.find(item => item.id === id);
+            if (rep && esFolioDireccion(rep.folio) && !getFoliosDirSincronizados().includes(String(rep.folio))) {
+                alert("Este reporte de Dirección todavía no se envía a la nube, así que no se puede quitar. Sincroniza primero.");
+                return;
+            }
+            if (!confirm("Se quitará de este equipo. Sigue guardado en la nube y vuelve a aparecer al sincronizar.\n\n¿Quitarlo de este equipo?")) return;
+            let updated = rawHistory.filter(item => item.id !== id);
+            localStorage.setItem('sej_reports_history', JSON.stringify(updated));
+            renderHistory();
+        }
+
+        function downloadBackup() {
+            const rawHistory = localStorage.getItem('sej_reports_history');
+            if (!rawHistory || JSON.parse(rawHistory).length === 0) {
+                alert("Base de datos vacía.");
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(rawHistory);
+            const downloadAnchor = document.createElement('a');
+            const fechaHoy = new Date().toISOString().split('T')[0];
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `CONCENTRADO_DIRECCION_CICLO_${fechaHoy}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // IMPORTACIÓN FORMATIVA INTELIGENTE ANTI-DUPLICADOS (Por Folio Serie X / Serie Regular e ID)
+        function importBackup(event) {
+            alert("La carga de respaldos ya no está disponible: los reportes se guardan en la nube.");
+            return;
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        let currentHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+                        
+                        let nuevosAgregados = 0;
+                        let duplicadosIgnorados = 0;
+
+                        importedData.forEach(newReport => {
+                            const existe = currentHistory.some(existing => 
+                                existing.id === newReport.id || 
+                                (existing.folio && newReport.folio && existing.folio === newReport.folio)
+                            );
+
+                            if (!existe) {
+                                currentHistory.push(newReport);
+                                nuevosAgregados++;
+                            } else {
+                                duplicadosIgnorados++;
+                            }
+                        });
+                        
+                        localStorage.setItem('sej_reports_history', JSON.stringify(currentHistory));
+                        renderHistory();
+                        
+                        alert(`Proceso de Consolidación Terminado:\n\n• Reportes nuevos integrados: ${nuevosAgregados}\n• Reportes duplicados omitidos por Folio: ${duplicadosIgnorados}`);
+                    } else {
+                        alert("Estructura de archivo inválida.");
+                    }
+                } catch (err) {
+                    alert("Error crítico al procesar el archivo.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function resetSchoolCycle() {
+            const pend = (JSON.parse(localStorage.getItem('sej_reports_history')) || []).filter(r => esFolioDireccion(r.folio) && !getFoliosDirSincronizados().includes(String(r.folio)));
+            if (pend.length) { alert(`Hay ${pend.length} reporte(s) de Dirección sin enviar. Sincroniza antes de vaciar este equipo.`); return; }
+            const confirmacion1 = confirm("¡CUIDADO! Va a limpiar la base de datos de Dirección de manera total.");
+            if (!confirmacion1) return;
+            const confirmacion2 = confirm("¿Desea borrar permanentemente todos los reportes consolidados del plantel?");
+            if (confirmacion2) {
+                localStorage.removeItem('sej_reports_history');
+                localStorage.removeItem(SEG_KEY);
+                localStorage.removeItem(SEG_SYNC_KEY);
+                localStorage.removeItem(DIR_SYNC_KEY);
+                renderHistory();
+                resetFields();
+                alert("Base de datos reseteada.");
+            }
+        }
+
+        // Configuración de notas para esta terminal
+        var SEG_ORIGEN = 'direccion';
+        var SEG_ROL_DEFAULT = 'Dirección';
+        var AREA_TERMINAL = 'Dirección';
+        function segAutorPorDefecto() { return getNombreDirectivo(); }
+
+        // =======================================================
+        //  NOTAS DE SEGUIMIENTO
+        //  Se agregan a un reporte ya guardado, sin modificarlo.
+        //  Una vez guardada, una nota no se edita ni se borra.
+        // =======================================================
+        var SEG_KEY = 'sej_seguimientos';
+        var SEG_SYNC_KEY = 'sej_synced_seguimientos';
+        var reporteAbiertoFolio = null;      // folio del reporte guardado que se está consultando
+        var seguimientoFolioActivo = null;   // folio abierto en la ventana de notas
+
+        function escHTML(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function getSeguimientos() {
+            try { return JSON.parse(localStorage.getItem(SEG_KEY)) || []; } catch (e) { return []; }
+        }
+        function setSeguimientos(lista) {
+            localStorage.setItem(SEG_KEY, JSON.stringify(lista));
+        }
+        function getSegSincronizados() {
+            try { return JSON.parse(localStorage.getItem(SEG_SYNC_KEY)) || []; } catch (e) { return []; }
+        }
+        function marcarSegSincronizados(ids) {
+            const set = new Set(getSegSincronizados());
+            ids.forEach(id => set.add(String(id)));
+            localStorage.setItem(SEG_SYNC_KEY, JSON.stringify([...set]));
+        }
+        function seguimientosDeFolio(folio) {
+            return getSeguimientos()
+                .filter(s => String(s.folio) === String(folio))
+                .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+        }
+        function formatearFechaHora(iso) {
+            const d = new Date(iso);
+            if (isNaN(d)) return String(iso || '');
+            return d.toLocaleString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function abrirSeguimiento(folio) {
+            if (!folio) {
+                alert("Este reporte no tiene folio, así que no se le pueden agregar notas.");
+                return;
+            }
+            seguimientoFolioActivo = String(folio);
+            const rep = (JSON.parse(localStorage.getItem('sej_reports_history')) || [])
+                .find(r => String(r.folio) === String(folio));
+            document.getElementById('segTitulo').textContent = `Seguimiento del folio ${folio}`;
+            document.getElementById('segAlumno').textContent = rep ? `${rep.studentName} (${rep.studentGrade} ${rep.studentGroup})` : '';
+            const rolSel = document.getElementById('segRol');
+            if (!rolSel.dataset.elegido) rolSel.value = SEG_ROL_DEFAULT;
+            const autorInput = document.getElementById('segAutor');
+            autorInput.value = segAutorPorDefecto(); autorInput.readOnly = true;
+            rolSel.value = SEG_ROL_DEFAULT; rolSel.disabled = true;
+            document.getElementById('segNota').value = '';
+            renderSeguimientosModal();
+            document.getElementById('segModal').classList.remove('hidden');
+            document.getElementById('segNota').focus();
+        }
+
+        function cerrarSeguimiento() {
+            document.getElementById('segModal').classList.add('hidden');
+            seguimientoFolioActivo = null;
+        }
+
+        function renderSeguimientosModal() {
+            const cont = document.getElementById('segLista');
+            const lista = seguimientosDeFolio(seguimientoFolioActivo);
+            const enviados = getSegSincronizados();
+            if (lista.length === 0) {
+                cont.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Este reporte todavía no tiene notas de seguimiento.</p>`;
+                return;
+            }
+            cont.innerHTML = lista.map(s => `
+                <div class="border-l-2 border-indigo-400 pl-2.5 py-1">
+                    <div class="text-[10px] text-slate-500">
+                        <strong class="text-slate-800">${escHTML(s.autor)}</strong> (${escHTML(s.rol)}), ${escHTML(formatearFechaHora(s.fecha))}
+                        ${enviados.includes(String(s.id)) ? '' : '<span class="text-amber-600 font-semibold ml-1">sin enviar</span>'}
+                    </div>
+                    <p class="text-xs text-slate-800 whitespace-pre-wrap mt-0.5">${escHTML(s.nota)}</p>
+                </div>`).join('');
+        }
+
+        function guardarSeguimiento() {
+            const autor = document.getElementById('segAutor').value.trim();
+            const rol = document.getElementById('segRol').value;
+            const nota = document.getElementById('segNota').value.trim();
+            if (!seguimientoFolioActivo) return;
+            if (!autor) { alert("Escribe tu nombre para firmar la nota."); document.getElementById('segAutor').focus(); return; }
+            if (!nota) { alert("Escribe el texto de la nota."); document.getElementById('segNota').focus(); return; }
+            if (!confirm("Una vez guardada, la nota no se podrá editar ni borrar.\n\n¿Guardar la nota?")) return;
+
+            const s = {
+                id: 'S' + Date.now() + Math.random().toString(36).slice(2, 6),
+                folio: seguimientoFolioActivo,
+                autor: autor,
+                rol: rol,
+                fecha: new Date().toISOString(),
+                nota: nota,
+                origen: SEG_ORIGEN
+            };
+            const lista = getSeguimientos();
+            lista.push(s);
+            setSeguimientos(lista);
+
+            document.getElementById('segNota').value = '';
+            renderSeguimientosModal();
+            renderHistory();
+            refrescarSeguimientosPreview();
+            if (typeof renderExpediente === 'function' && expedienteNombreBase) renderExpediente();
+
+            enviarSeguimientoANube(s).then(ok => {
+                if (ok && seguimientoFolioActivo) renderSeguimientosModal();
+            });
+        }
+
+        async function enviarSeguimientoANube(s) {
+            if (!navigator.onLine) return false;
+            try {
+                await SEJ.api('guardarSeguimiento', { nota: { id: s.id, folio: s.folio, fecha: s.fecha, nota: s.nota } });
+                marcarSegSincronizados([s.id]); return true;
+            } catch (e) { return false; }
+        }
+
+        async function enviarSeguimientosPendientes() {
+            const enviados = getSegSincronizados();
+            const pendientes = getSeguimientos().filter(s => !enviados.includes(String(s.id)));
+            let ok = 0;
+            for (const s of pendientes) {
+                if (await enviarSeguimientoANube(s)) ok++;
+                else break;
+            }
+            return { enviados: ok, pendientes: pendientes.length - ok };
+        }
+
+        // Descarga las notas de la nube y agrega las que falten.
+        // soloFoliosLocales = true: solo guarda notas de reportes que existen en este dispositivo.
+        async function descargarSeguimientos(soloFoliosLocales, yaLeidas) {
+            const data = yaLeidas ? { seguimientos: yaLeidas } : await SEJ.api('misSeguimientos');
+
+            const foliosLocales = new Set((JSON.parse(localStorage.getItem('sej_reports_history')) || []).map(x => String(x.folio)));
+            const locales = getSeguimientos();
+            const ids = new Set(locales.map(s => String(s.id)));
+            const idsNube = [];
+            let nuevas = 0;
+
+            (data.seguimientos || []).forEach(s => {
+                s.id = String(s.id);
+                s.folio = String(s.folio);
+                if (soloFoliosLocales && !foliosLocales.has(s.folio)) return;
+                idsNube.push(s.id);
+                if (!ids.has(s.id)) {
+                    locales.push(s);
+                    ids.add(s.id);
+                    nuevas++;
+                }
+            });
+
+            setSeguimientos(locales);
+            marcarSegSincronizados(idsNube);
+            return nuevas;
+        }
+
+        // Muestra en el documento las notas del reporte que se está consultando
+        function refrescarSeguimientosPreview() {
+            const box = document.getElementById('prevSeguimientos');
+            const lista = document.getElementById('prevSeguimientosLista');
+            if (!box || !lista) return;
+            const notas = reporteAbiertoFolio ? seguimientosDeFolio(reporteAbiertoFolio) : [];
+            if (notas.length === 0) {
+                box.classList.add('hidden');
+                lista.innerHTML = '';
+                return;
+            }
+            lista.innerHTML = notas.map(s => `
+                <div class="border-b border-dotted border-slate-400 pb-1.5">
+                    <div class="text-[10px] font-semibold">${escHTML(s.autor)} (${escHTML(s.rol)}), ${escHTML(formatearFechaHora(s.fecha))}:</div>
+                    <div class="whitespace-pre-wrap">${escHTML(s.nota)}</div>
+                </div>`).join('');
+            box.classList.remove('hidden');
+        }
+
+        // Aviso de "reporte guardado en consulta" en el formulario
+        function mostrarBannerConsulta() {
+            const banner = document.getElementById('bannerConsulta');
+            if (!banner) return;
+            if (reporteAbiertoFolio) {
+                document.getElementById('bannerConsultaFolio').textContent = reporteAbiertoFolio;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        function cerrarConsulta() {
+            reporteAbiertoFolio = null;
+            mostrarBannerConsulta();
+            refrescarSeguimientosPreview();
+            resetFields();
+        }
+
+
+        // =======================================================
+        //  EXPEDIENTE DEL ALUMNO
+        //  Reúne en una sola vista todos los reportes de todas las
+        //  áreas (Prefectura, Gabinete, Dirección) con sus notas.
+        // =======================================================
+        var expedienteNombres = new Set();   // nombres (normalizados) incluidos
+        var expedienteNombreBase = '';
+
+        function normalizarNombre(n) {
+            return cleanText(String(n || '')).replace(/[^a-zñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function origenDeReporte(rep) {
+            if (esFolioDireccion(rep.folio)) return 'Dirección';
+            if (rep.area === 'Gabinete psicopedagógico') return 'Gabinete psicopedagógico';
+            return 'Prefectura';
+        }
+
+        function fechaLarga(valor) {
+            const txt = String(valor || '');
+            const m = txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return txt || 'Sin fecha';
+            const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
+            return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        // Nombres parecidos: uno contiene todas las palabras del otro (ej. "juan perez" y "juan perez lopez")
+        function nombresParecidos(base, todos) {
+            const tb = base.split(' ');
+            return todos.filter(n => {
+                if (n === base) return false;
+                const tn = n.split(' ');
+                const corto = tb.length <= tn.length ? tb : tn;
+                const largo = tb.length <= tn.length ? tn : tb;
+                return corto.length >= 2 && corto.every(t => largo.includes(t));
+            });
+        }
+
+        function abrirExpediente(nombre) {
+            expedienteNombreBase = normalizarNombre(nombre);
+            expedienteNombres = new Set([expedienteNombreBase]);
+            renderExpediente();
+            document.getElementById('expModal').classList.remove('hidden');
+        }
+
+        function cerrarExpediente() {
+            document.getElementById('expModal').classList.add('hidden');
+        }
+
+        function alternarNombreExpediente(n) {
+            if (expedienteNombres.has(n)) expedienteNombres.delete(n);
+            else expedienteNombres.add(n);
+            renderExpediente();
+        }
+
+        function construirExpediente() {
+            const historial = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+            const reportes = historial
+                .filter(r => expedienteNombres.has(normalizarNombre(r.studentName)))
+                .sort((a, b) => String(a.eventDate).localeCompare(String(b.eventDate)) || (Number(a.id) - Number(b.id)));
+
+            const conteoPorNombre = {};
+            historial.forEach(r => {
+                const n = normalizarNombre(r.studentName);
+                if (n) conteoPorNombre[n] = (conteoPorNombre[n] || 0) + 1;
+            });
+            const parecidos = nombresParecidos(expedienteNombreBase, Object.keys(conteoPorNombre));
+            const nombreOriginal = {};
+            historial.forEach(r => { const n = normalizarNombre(r.studentName); if (!nombreOriginal[n]) nombreOriginal[n] = r.studentName; });
+
+            return { reportes, parecidos, conteoPorNombre, nombreOriginal };
+        }
+
+        // Campos específicos de cada formato, solo los que tienen contenido
+        function camposDelReporte(rep) {
+            const campos = [];
+            const add = (etiqueta, valor) => { if (valor && String(valor).trim()) campos.push([etiqueta, valor]); };
+            if (rep.format === 'otro') {
+                add('Título', rep.customTitle);
+                add('Contenido', rep.customContent);
+            }
+            add('Hora del incidente', rep.eventTime);
+            add('Testigos', rep.witnesses);
+            add('Acción aplicada', rep.actionApplied);
+            add('Plan de intervención', rep.interventionPlan);
+            if (rep.format === 'citatorio' && (rep.appointmentDate || rep.appointmentTime)) {
+                add('Cita', `${fechaLarga(rep.appointmentDate)}${rep.appointmentTime ? ', ' + rep.appointmentTime + ' h' : ''}`);
+            }
+            add('Tareas o actividades faltantes', rep.missingTasks);
+            add('Compromiso del tutor', rep.tutorAgreement);
+            return campos;
+        }
+
+        function htmlExpediente(datos, paraImprimir) {
+            const { reportes } = datos;
+            const formatos = { leve: "Incidencia leve", moderada: "Incidencia moderada", grave: "Incidencia grave (acta de hechos)", citatorio: "Citatorio", omision: "Omisión de actividades (NEM)", otro: "Formato libre" };
+            // Nombre a mostrar: la escritura más usada, prefiriendo la que tiene mayúsculas
+            const conteoEscrituras = {};
+            reportes.forEach(r => { const n = String(r.studentName || '').trim(); if (n) conteoEscrituras[n] = (conteoEscrituras[n] || 0) + 1; });
+            const nombreMostrar = Object.keys(conteoEscrituras).sort((a, b) =>
+                (conteoEscrituras[b] - conteoEscrituras[a]) || ((/[A-ZÁÉÍÓÚÑ]/.test(b) ? 1 : 0) - (/[A-ZÁÉÍÓÚÑ]/.test(a) ? 1 : 0))
+            )[0] || expedienteNombreBase;
+            const gruposVistos = [...new Set(reportes.map(r => `${r.studentGrade} ${r.studentGroup}`))];
+            const escuela = reportes.length ? reportes[reportes.length - 1].schoolName : '';
+
+            const porArea = {};
+            reportes.forEach(r => { const o = origenDeReporte(r); porArea[o] = (porArea[o] || 0) + 1; });
+            const totalNotas = reportes.reduce((acc, r) => acc + (r.folio ? seguimientosDeFolio(r.folio).length : 0), 0);
+            const graves = reportes.filter(r => r.format === 'grave').length;
+
+            const resumenAreas = Object.entries(porArea).map(([a, n]) => `${a}: ${n}`).join('; ');
+
+            let html = `
+                <div class="${paraImprimir ? 'border-b-2 border-black pb-2 mb-3' : 'pb-2 mb-2 border-b'}">
+                    ${paraImprimir ? `<div class="text-[10px] uppercase tracking-wide">Secretaría de Educación del Estado de Jalisco${escuela ? ', ' + escHTML(escuela) : ''}</div>` : ''}
+                    <h2 class="${paraImprimir ? 'text-lg' : 'text-base'} font-bold">Expediente de ${escHTML(nombreMostrar)}</h2>
+                    <div class="text-[11px] ${paraImprimir ? '' : 'text-slate-600'}">
+                        Grado y grupo: ${escHTML(gruposVistos.join(', ') || '--')}.
+                        ${reportes.length} reporte(s) (${escHTML(resumenAreas || 'ninguno')}), ${totalNotas} nota(s) de seguimiento${graves ? `, ${graves} incidencia(s) grave(s)` : ''}.
+                    </div>
+                    <div class="text-[10px] ${paraImprimir ? '' : 'text-slate-400'}">Consultado el ${escHTML(new Date().toLocaleString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }))} (incluye solo lo sincronizado hasta ese momento).</div>
+                </div>`;
+
+            if (!reportes.length) {
+                return html + `<p class="text-xs text-slate-500 py-4 text-center">No hay reportes con este nombre.</p>`;
+            }
+
+            html += reportes.map(rep => {
+                const origen = origenDeReporte(rep);
+                const autor = rep.directivo || rep.prefecto || '';
+                const notas = rep.folio ? seguimientosDeFolio(rep.folio) : [];
+                const color = origen === 'Dirección' ? 'border-slate-800' : origen === 'Prefectura' ? 'border-yellow-500' : 'border-teal-600';
+                const campos = camposDelReporte(rep);
+                return `
+                <div class="border-l-4 ${color} pl-3 py-1.5 mb-3 ${paraImprimir ? '' : 'bg-white'}" style="break-inside: avoid;">
+                    <div class="flex flex-wrap justify-between gap-x-3 text-[11px]">
+                        <strong>${escHTML(fechaLarga(rep.eventDate))}. ${escHTML(formatos[rep.format] || rep.format || 'Reporte')}</strong>
+                        <span class="font-mono">Folio ${escHTML(rep.folio || '--')}</span>
+                    </div>
+                    <div class="text-[10px] ${paraImprimir ? '' : 'text-slate-500'}">
+                        ${escHTML(origen)}${autor ? `, capturó ${escHTML(autor)}` : ''}. Grupo ${escHTML(rep.studentGrade)} ${escHTML(rep.studentGroup)}.
+                    </div>
+                    <p class="text-xs mt-1 whitespace-pre-wrap">${escHTML(rep.eventDescription)}</p>
+                    ${campos.map(([k, v]) => `<p class="text-[11px] mt-0.5 whitespace-pre-wrap"><strong>${escHTML(k)}:</strong> ${escHTML(v)}</p>`).join('')}
+                    ${notas.length ? `
+                        <div class="mt-1.5 ml-2 pl-2 border-l border-dashed ${paraImprimir ? 'border-black' : 'border-slate-300'} space-y-1">
+                            ${notas.map(s => `
+                                <div class="text-[11px]">
+                                    <span class="font-semibold">Seguimiento de ${escHTML(s.autor)} (${escHTML(s.rol)}), ${escHTML(formatearFechaHora(s.fecha))}:</span>
+                                    <span class="whitespace-pre-wrap">${escHTML(s.nota)}</span>
+                                </div>`).join('')}
+                        </div>` : ''}
+                    ${paraImprimir ? '' : `
+                        <div class="flex gap-2 mt-1.5">
+                            <button onclick="cerrarExpediente(); abrirSeguimiento('${escHTML(rep.folio || '')}')" class="text-[10px] bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-white font-bold px-2 py-0.5 rounded"><i class="fa-solid fa-comment-medical"></i> Agregar nota</button>
+                            <button onclick="cerrarExpediente(); loadReportToPreview(${Number(rep.id)})" class="text-[10px] bg-slate-100 text-slate-800 hover:bg-slate-800 hover:text-white font-bold px-2 py-0.5 rounded"><i class="fa-solid fa-eye"></i> Abrir reporte</button>
+                        </div>`}
+                </div>`;
+            }).join('');
+
+            if (paraImprimir) {
+                html += `
+                <div class="grid grid-cols-2 gap-8 text-center text-[10px] mt-10">
+                    <div class="border-t border-black pt-1">Dirección / Subdirección</div>
+                    <div class="border-t border-black pt-1">Gabinete psicopedagógico</div>
+                </div>
+                <div class="text-[8px] text-center mt-4">Documento de uso interno. Contiene información confidencial del alumno.</div>`;
+            }
+            return html;
+        }
+
+        function renderExpediente() {
+            const datos = construirExpediente();
+            const sugerencias = document.getElementById('expParecidos');
+            if (datos.parecidos.length) {
+                sugerencias.innerHTML = `<span class="text-slate-600">Hay nombres parecidos, ¿son el mismo alumno?</span> ` +
+                    datos.parecidos.map(n => {
+                        const activo = expedienteNombres.has(n);
+                        return `<button onclick="alternarNombreExpediente('${escHTML(n)}')" class="px-2 py-0.5 rounded-full border text-[10px] font-semibold ${activo ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-300'}">
+                            ${activo ? '<i class="fa-solid fa-check"></i> ' : '+ '}${escHTML(datos.nombreOriginal[n])} (${datos.conteoPorNombre[n]})
+                        </button>`;
+                    }).join(' ');
+                sugerencias.classList.remove('hidden');
+            } else {
+                sugerencias.classList.add('hidden');
+                sugerencias.innerHTML = '';
+            }
+            document.getElementById('expContenido').innerHTML = htmlExpediente(datos, false);
+            document.getElementById('expedientePrint').innerHTML = htmlExpediente(datos, true);
+        }
+
+        function imprimirExpediente() {
+            document.body.classList.add('print-expediente');
+            const quitar = () => document.body.classList.remove('print-expediente');
+            window.addEventListener('afterprint', quitar, { once: true });
+            window.print();
+            setTimeout(quitar, 1000);
+        }
+
+        sejBarra('index.html', 'Administración');
+
+        updateFormType();
+    </script>
+
+    <!-- VENTANA DE NOTAS DE SEGUIMIENTO -->
+    <div id="segModal" class="hidden no-print fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4" onclick="if(event.target===this) cerrarSeguimiento()">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-xl border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-start px-5 pt-4 pb-3 border-b">
+                <div>
+                    <h3 id="segTitulo" class="text-sm font-bold text-slate-900">Seguimiento</h3>
+                    <p id="segAlumno" class="text-[11px] text-slate-500"></p>
+                </div>
+                <button onclick="cerrarSeguimiento()" class="text-slate-400 hover:text-slate-700 text-lg leading-none px-1" aria-label="Cerrar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="segLista" class="px-5 py-3 space-y-2.5 overflow-y-auto flex-1 min-h-[80px]"></div>
+
+            <div class="px-5 pb-4 pt-3 border-t space-y-2 bg-slate-50 rounded-b-xl">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="segAutor" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Nombre de quien escribe</label>
+                        <input type="text" id="segAutor" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="segRol" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Área</label>
+                        <select id="segRol" onchange="this.dataset.elegido = '1'" class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option>Prefectura</option>
+                            <option>Gabinete psicopedagógico</option>
+                            <option>Dirección</option>
+                            <option>Subdirección</option>
+                            <option>Docente</option>
+                            <option>Trabajo social</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label for="segNota" class="block text-[10px] font-semibold text-slate-500 mb-0.5">Nueva nota</label>
+                    <textarea id="segNota" rows="3" placeholder="Ej: Se entrevistó a la madre de familia; se acordó revisión semanal de la bitácora." class="w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[10px] text-slate-500"><i class="fa-solid fa-lock mr-1"></i>Las notas guardadas no se pueden editar ni borrar.</p>
+                    <button onclick="guardarSeguimiento()" class="shrink-0 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
+                        <i class="fa-solid fa-plus"></i> Agregar nota
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VENTANA DE EXPEDIENTE DEL ALUMNO -->
+    <div id="expModal" class="hidden no-print fixed inset-0 z-40 bg-slate-900/60 flex items-center justify-center p-4" onclick="if(event.target===this) cerrarExpediente()">
+        <div class="bg-slate-50 w-full max-w-2xl rounded-xl shadow-xl border border-slate-200 flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center px-5 py-3 border-b bg-white rounded-t-xl">
+                <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-folder-open text-indigo-600 mr-1"></i> Expediente del alumno</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="imprimirExpediente()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold rounded-lg flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Imprimir expediente
+                    </button>
+                    <button onclick="cerrarExpediente()" class="text-slate-400 hover:text-slate-700 text-lg leading-none px-1" aria-label="Cerrar">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="expParecidos" class="hidden px-5 py-2 bg-indigo-50 border-b border-indigo-100 text-[11px] flex flex-wrap gap-1.5 items-center"></div>
+            <div id="expContenido" class="px-5 py-3 overflow-y-auto flex-1"></div>
+        </div>
+    </div>
+
+    <!-- Copia para imprimir el expediente (solo visible al imprimir) -->
+    <div id="expedientePrint" class="document-font text-black"></div>
+</body>
+</html>

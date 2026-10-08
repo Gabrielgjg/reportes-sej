@@ -251,7 +251,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 
 <script>
 "use strict";
-const APP_VERSION = "8.0.1-etapa2a";
+const APP_VERSION = "8.1-etapa2b";
 const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
 const ROLES = {
   prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
@@ -443,11 +443,32 @@ $("mCambiar").addEventListener("click", () => {
 });
 $("mSalir").addEventListener("click", async () => {
   $("menuCuenta").hidden = true;
-  if (await confirmar("Cerrar sesión", "Para volver a entrar necesitarás tu usuario, tu contraseña e internet.", "Cerrar sesión")) salir();
+  const p = pendientesLocales(ses.usuario);
+  const texto = (p.reportes || p.notas)
+    ? `Tienes ${p.reportes} reporte(s) y ${p.notas} nota(s) sin enviar. Se quedarán guardados en este aparato hasta que vuelvas a entrar y sincronices. Para volver a entrar necesitarás internet.`
+    : "Tus reportes ya están en la nube, así que se quitarán de este aparato. Para volver a entrar necesitarás tu usuario, tu contraseña e internet.";
+  if (await confirmar("Cerrar sesión", texto, "Cerrar sesión")) salir();
 });
 
+// Datos que este usuario tiene en el aparato y aún no llegan a la nube
+function pendientesLocales(u) {
+  const pre = "sejv8_" + u.usuario + "_";
+  const L = k => { try { return JSON.parse(localStorage.getItem(pre + k)) || []; } catch (e) { return []; } };
+  const esDir = f => !String(f).includes("-") && /X\d{5}$/.test(String(f));
+  const enviados = (u.rol === "direccion" ? L("dir_synced_folios") : L("synced_folios")).map(String);
+  const reportes = L("reports_history").filter(r => r.folio && (u.rol !== "direccion" || esDir(r.folio)) && !enviados.includes(String(r.folio))).length;
+  const notasEnv = L("synced_seguimientos").map(String);
+  const notas = L("seguimientos").filter(n => !notasEnv.includes(String(n.id))).length;
+  return { reportes, notas };
+}
+
 async function salir() {
+  const u = ses && ses.usuario;
   try { if (navigator.onLine && ses) await api("logout"); } catch (e) { }
+  if (u) {
+    const p = pendientesLocales(u);
+    if (!p.reportes && !p.notas) Object.keys(localStorage).filter(k => k.startsWith("sejv8_" + u.usuario + "_")).forEach(k => localStorage.removeItem(k));
+  }
   cerrarLocal("");
 }
 
@@ -456,14 +477,15 @@ async function salir() {
 // ------------------------------------------------------------
 function pintarApp() {
   const u = ses.usuario;
+  if (u.rol !== "direccion" && u.activo !== false && !/[?&]cuenta/.test(location.search)) { location.replace("captura.html"); return; }
   $("btnCuenta").textContent = u.nombre.split(/\s+/)[0] + " ▾";
   const pest = [["inicio", "Inicio"]];
-  if (u.rol === "direccion") pest.push(["usuarios", "Usuarios"], ["historial", "Reportes anteriores"], ["bitacora", "Bitácora"]);
+  if (u.rol === "direccion") pest.push(["reportes", "Reportes y expedientes"], ["usuarios", "Usuarios"], ["historial", "Reportes anteriores"], ["bitacora", "Bitácora"]);
   if (!pest.some(p => p[0] === vistaActual)) vistaActual = "inicio";
   $("pestanas").innerHTML = pest.map(([id, t]) =>
     `<button role="tab" data-vista="${id}" aria-selected="${id === vistaActual}">${t}</button>`).join("");
   $("pestanas").hidden = pest.length < 2;
-  $("pestanas").querySelectorAll("button").forEach(b => b.onclick = () => irA(b.dataset.vista));
+  $("pestanas").querySelectorAll("button").forEach(b => b.onclick = () => b.dataset.vista === "reportes" ? location.href = "direccion.html" : irA(b.dataset.vista));
   irA(vistaActual);
   pintarRed();
 }
@@ -495,14 +517,14 @@ function pintarInicio() {
       <div class="bloque">
         <h2>Administración</h2>
         <p>Desde aquí das de alta al personal, asignas los reportes que se capturaron antes con las terminales v7 y revisas quién ha entrado al sistema.</p>
-        <p class="ayuda">La consulta de reportes, expedientes y notas llega en la siguiente etapa. Mientras tanto, la Terminal de Dirección v7 sigue funcionando como siempre.</p>
+        <p><a class="btn" href="direccion.html" style="display:inline-block;text-decoration:none">Abrir reportes y expedientes</a></p>
       </div>` : `
       <div class="bloque">
         <h2>Tus folios</h2>
         ${prefijos.length ? `<p>Último folio que usaste en cada grupo. El siguiente reporte continuará desde aquí, aunque no tengas internet.</p>
           <table class="tabla"><thead><tr><th>Grado y grupo</th><th>Último folio</th></tr></thead><tbody>${filas}</tbody></table>`
         : `<p class="vacio">Aún no tienes reportes. Tu primer folio en cada grupo será el 00001.</p>`}
-        <p class="ayuda">La captura de reportes llega en la siguiente etapa. Mientras tanto, sigue usando tu terminal v7.</p>
+        <p><a class="btn" href="captura.html" style="display:inline-block;text-decoration:none">Capturar reportes</a></p>
       </div>`}
   `;
 }
