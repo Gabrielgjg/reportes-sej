@@ -36,17 +36,26 @@ const SEJ = (() => {
 
   class ErrorApi extends Error { constructor(m, c) { super(m); this.codigo = c; } }
 
+  // Si en este aparato Google desvía los envíos POST, se usa directo la vía GET (una sola petición en vez de dos).
+  async function enviar(url, cuerpo) {
+    const json = JSON.stringify(cuerpo);
+    if (LS.getItem("sejv8_via") === "get" && json.length < 3000) {
+      return (await fetch(url + "?p=" + encodeURIComponent(json))).json();
+    }
+    let d = await (await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: json })).json();
+    if (d && d.codigo === "V7_DESACTIVADA") {
+      LS.setItem("sejv8_via", "get");
+      d = await (await fetch(url + "?p=" + encodeURIComponent(json))).json();
+    }
+    return d;
+  }
+
   async function api(accion, datos = {}) {
     if (!navigator.onLine) throw new ErrorApi("No hay conexión a internet.", "SIN_RED");
     const cuerpo = Object.assign({ accion, token: ses.token }, datos);
     let d;
     try {
-      const r = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(cuerpo) });
-      d = await r.json();
-      if (d && d.codigo === "V7_DESACTIVADA") {
-        const r2 = await fetch(cfg.url + "?p=" + encodeURIComponent(JSON.stringify(cuerpo)));
-        d = await r2.json();
-      }
+      d = await enviar(cfg.url, cuerpo);
     } catch (e) {
       throw new ErrorApi("No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED");
     }

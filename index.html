@@ -251,7 +251,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 
 <script>
 "use strict";
-const APP_VERSION = "8.1-etapa2b";
+const APP_VERSION = "8.2";
 const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
 const ROLES = {
   prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
@@ -279,26 +279,32 @@ let vistaActual = "inicio";
 // ------------------------------------------------------------
 class ErrorApi extends Error { constructor(msg, codigo) { super(msg); this.codigo = codigo; } }
 
+// Si en este aparato Google desvía los envíos POST, se usa directo la vía GET (una sola petición en vez de dos).
+async function enviarPeticion(url, cuerpo) {
+  const json = JSON.stringify(cuerpo);
+  if (localStorage.getItem("sejv8_via") === "get" && json.length < 3000) {
+    return (await fetch(url + "?p=" + encodeURIComponent(json))).json();
+  }
+  let d = await (await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: json })).json();
+  if (d && d.codigo === "V7_DESACTIVADA") {
+    localStorage.setItem("sejv8_via", "get");
+    d = await (await fetch(url + "?p=" + encodeURIComponent(json))).json();
+  }
+  return d;
+}
+
 async function api(accion, datos = {}, url = cfg.url) {
   if (!navigator.onLine) throw new ErrorApi("No hay conexión a internet.", "SIN_RED");
   const cuerpo = Object.assign({ accion }, datos);
   if (ses && ses.token && !cuerpo.token && accion !== "login") cuerpo.token = ses.token;
-  let r;
+  let d;
   try {
-    r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(cuerpo) });
+    d = await enviarPeticion(url, cuerpo);
   } catch (e) {
+    if (e instanceof SyntaxError) throw new ErrorApi("El servidor respondió algo inesperado. Revisa la dirección del servidor.", "RESPUESTA");
     throw new ErrorApi(accion === "ping"
       ? "No se pudo conectar. Revisa tu internet y que el script esté publicado con acceso para «Cualquier usuario»."
       : "No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED");
-  }
-  let d;
-  try { d = await r.json(); } catch (e) { throw new ErrorApi("El servidor respondió algo inesperado. Revisa la dirección del servidor.", "RESPUESTA"); }
-  // Si Google convirtió el envío en GET, se repite por la vía de respaldo.
-  if (d && d.codigo === "V7_DESACTIVADA") {
-    try {
-      r = await fetch(url + "?p=" + encodeURIComponent(JSON.stringify(cuerpo)));
-      d = await r.json();
-    } catch (e) { throw new ErrorApi("No se pudo conectar con el servidor. Revisa tu internet.", "SIN_RED"); }
   }
   if (!d.ok) {
     if (d.codigo === "SESION_INVALIDA" && accion !== "login") { cerrarLocal(d.error); }
