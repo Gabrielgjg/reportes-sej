@@ -251,7 +251,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 
 <script>
 "use strict";
-const APP_VERSION = "8.2";
+const APP_VERSION = "8.3";
 const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
 const ROLES = {
   prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
@@ -449,15 +449,31 @@ $("mCambiar").addEventListener("click", () => {
 });
 $("mSalir").addEventListener("click", async () => {
   $("menuCuenta").hidden = true;
-  const p = pendientesLocales(ses.usuario);
-  const texto = (p.reportes || p.notas)
-    ? `Tienes ${p.reportes} reporte(s) y ${p.notas} nota(s) sin enviar. Se quedarán guardados en este aparato hasta que vuelvas a entrar y sincronices. Para volver a entrar necesitarás internet.`
+  const p = await pendientesLocales(ses.usuario);
+  const texto = (p.reportes || p.notas || p.fotos)
+    ? `Tienes ${p.reportes} reporte(s), ${p.fotos} foto(s) y ${p.notas} nota(s) sin enviar. Se quedarán guardados en este aparato hasta que vuelvas a entrar y sincronices. Para volver a entrar necesitarás internet.`
     : "Tus reportes ya están en la nube, así que se quitarán de este aparato. Para volver a entrar necesitarás tu usuario, tu contraseña e internet.";
   if (await confirmar("Cerrar sesión", texto, "Cerrar sesión")) salir();
 });
 
 // Datos que este usuario tiene en el aparato y aún no llegan a la nube
-function pendientesLocales(u) {
+function fotosPendientes(u) {
+  return new Promise(res => {
+    try {
+      const r = indexedDB.open("sejv8_fotos_" + u.usuario);
+      r.onsuccess = () => {
+        const db = r.result;
+        if (!db.objectStoreNames.contains("fotos")) { db.close(); return res(0); }
+        const q = db.transaction("fotos").objectStore("fotos").getAll();
+        q.onsuccess = () => { db.close(); res(q.result.filter(f => !f.subida).length); };
+        q.onerror = () => { db.close(); res(0); };
+      };
+      r.onerror = () => res(0);
+    } catch (e) { res(0); }
+  });
+}
+
+async function pendientesLocales(u) {
   const pre = "sejv8_" + u.usuario + "_";
   const L = k => { try { return JSON.parse(localStorage.getItem(pre + k)) || []; } catch (e) { return []; } };
   const esDir = f => !String(f).includes("-") && /X\d{5}$/.test(String(f));
@@ -465,15 +481,19 @@ function pendientesLocales(u) {
   const reportes = L("reports_history").filter(r => r.folio && (u.rol !== "direccion" || esDir(r.folio)) && !enviados.includes(String(r.folio))).length;
   const notasEnv = L("synced_seguimientos").map(String);
   const notas = L("seguimientos").filter(n => !notasEnv.includes(String(n.id))).length;
-  return { reportes, notas };
+  const fotos = await fotosPendientes(u);
+  return { reportes, notas, fotos };
 }
 
 async function salir() {
   const u = ses && ses.usuario;
   try { if (navigator.onLine && ses) await api("logout"); } catch (e) { }
   if (u) {
-    const p = pendientesLocales(u);
-    if (!p.reportes && !p.notas) Object.keys(localStorage).filter(k => k.startsWith("sejv8_" + u.usuario + "_")).forEach(k => localStorage.removeItem(k));
+    const p = await pendientesLocales(u);
+    if (!p.reportes && !p.notas && !p.fotos) {
+      Object.keys(localStorage).filter(k => k.startsWith("sejv8_" + u.usuario + "_")).forEach(k => localStorage.removeItem(k));
+      try { indexedDB.deleteDatabase("sejv8_fotos_" + u.usuario); } catch (e) { }
+    }
   }
   cerrarLocal("");
 }

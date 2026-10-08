@@ -1,6 +1,6 @@
 // Reportes SEJ — funciona sin conexión.
 // La app se guarda en el aparato; las peticiones al servidor nunca se guardan.
-const CACHE = "reportes-sej-v8-2b";
+const CACHE = "reportes-sej-v8-3";
 const ARCHIVOS = ["./", "./index.html", "./captura.html", "./direccion.html", "./v8-base.js", "./manifest.webmanifest", "./icon.svg"];
 // Diseño de las terminales (se guardan para funcionar sin conexión)
 const EXTERNOS = [

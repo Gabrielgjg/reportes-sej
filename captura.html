@@ -195,6 +195,7 @@
                         </div>
 
                         <div id="additionalFieldsArea"></div>
+                        <div id="sejFotosCaptura" class="no-print"></div>
                     </div>
 
                     <!-- Botones del Sistema -->
@@ -443,10 +444,7 @@
         // -------------------------------------------------------
         const SCRIPT_URL = SEJ.cfg.url;
         document.getElementById('prefectName').value = SEJ.usuario.nombre;
-        if (SEJ.usuario.rol !== 'gabinete') {
-            const opOtro = document.querySelector('#formatSelector option[value="otro"]');
-            if (opOtro) opOtro.remove();
-        }
+        SEJFotos.montar(document.getElementById('sejFotosCaptura'));
 
         // Clave donde guardamos qué folios ya fueron enviados exitosamente
         const SYNC_KEY = 'sej_synced_folios';
@@ -504,6 +502,7 @@
             if (!navigator.onLine) return;
             enviarReporteANube(reporte).then(res => {
                 if (res.estado === 'ok' && res.folioAnterior) { avisoRenumerado([res]); calculateNextFolio(); }
+                if (res.estado === 'ok') SEJFotos.subirPendientes().then(() => renderHistory());
                 if (res.estado === 'rechazado') alert(`El reporte ${reporte.folio} no se pudo enviar: ${res.mensaje}\n\nQuedó guardado en este aparato.`);
                 renderHistory();
             });
@@ -534,8 +533,9 @@
                 else { fallo = true; break; }
             }
 
-            let notas = { enviados: 0, pendientes: 0 }, notasNuevas = 0;
+            let notas = { enviados: 0, pendientes: 0 }, notasNuevas = 0, fotos = { subidas: 0, pendientes: 0 };
             if (!fallo) {
+                fotos = await SEJFotos.subirPendientes((i, n) => { statusEl.textContent = `📷 Subiendo foto ${i} de ${n}...`; });
                 statusEl.textContent = "⬆️ Enviando notas de seguimiento...";
                 notas = await enviarSeguimientosPendientes();
                 try {
@@ -549,8 +549,8 @@
             renderHistory();
             refrescarSeguimientosPreview();
 
-            const partes = [`${enviados} reporte(s) enviado(s)`, `${notas.enviados} nota(s) enviada(s)`, `${notasNuevas} nota(s) recibida(s)`];
-            statusEl.textContent = (fallo || notas.pendientes > 0)
+            const partes = [`${enviados} reporte(s) enviado(s)`, `${fotos.subidas} foto(s)`, `${notas.enviados} nota(s) enviada(s)`, `${notasNuevas} nota(s) recibida(s)`];
+            statusEl.textContent = (fallo || notas.pendientes > 0 || fotos.pendientes > 0)
                 ? `⚠️ ${partes.join(', ')}. Quedaron pendientes; revisa tu conexión e intenta de nuevo.`
                 : `✅ ${partes.join(', ')}.`;
             avisoRenumerado(renumerados);
@@ -894,6 +894,7 @@
         }
 
         function resetFields() {
+            SEJFotos.limpiar();
             reporteAbiertoFolio = null;
             mostrarBannerConsulta();
             refrescarSeguimientosPreview();
@@ -954,6 +955,7 @@
                 customContent: document.getElementById('customContent')?.value || ''
             };
 
+            report.fotos = SEJFotos.guardarSeleccion(report);
             let internalHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
             internalHistory.push(report);
             localStorage.setItem('sej_reports_history', JSON.stringify(internalHistory));
@@ -1047,6 +1049,7 @@
                             <button onclick="deleteReport(${rep.id})" class="text-[10px] text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
+                            ${SEJFotos.boton(rep)}
                             <button onclick="abrirSeguimiento('${escHTML(rep.folio || '')}')" class="text-[10px] bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-white font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1">
                                 <i class="fa-solid fa-comment-medical"></i> Seguimiento${numNotas ? ` (${numNotas})` : ''}
                             </button>
