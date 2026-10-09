@@ -264,6 +264,9 @@
                             <i class="fa-solid fa-arrows-rotate"></i> Enviar a Dirección y recibir notas
                         </button>
                         <div id="syncStatus" class="text-[10px] text-center text-slate-500 hidden py-0.5"></div>
+                        <button onclick="traerAnteriores(false)" class="w-full px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Traer mis reportes anteriores (v7)
+                        </button>
                         
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="downloadBackup()" class="w-full px-3 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 transition-colors">
@@ -447,6 +450,7 @@
         const SCRIPT_URL = SEJ.cfg.url;
         document.getElementById('prefectName').value = SEJ.usuario.nombre;
         SEJFotos.montar(document.getElementById('sejFotosCaptura'));
+        SEJPadron.montar();
 
         // Clave donde guardamos qué folios ya fueron enviados exitosamente
         const SYNC_KEY = 'sej_synced_folios';
@@ -896,7 +900,7 @@
         }
 
         function resetFields() {
-            SEJFotos.limpiar();
+            SEJFotos.limpiar(); SEJPadron.limpiar();
             reporteAbiertoFolio = null;
             mostrarBannerConsulta();
             refrescarSeguimientosPreview();
@@ -957,6 +961,7 @@
                 customContent: document.getElementById('customContent')?.value || ''
             };
 
+            report.alumnoCodigo = SEJPadron.codigoActual();
             report.fotos = SEJFotos.guardarSeleccion(report);
             let internalHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
             internalHistory.push(report);
@@ -1043,7 +1048,7 @@
                             </div>
                             <div class="flex justify-between text-[10px] text-slate-400 font-medium mt-0.5">
                                 <span><i class="fa-regular fa-calendar"></i> ${escHTML(rep.eventDate)}</span>
-                                <span class="font-mono font-bold text-indigo-700">Folio: ${escHTML(displayFolio)}${getFoliosSincronizados().includes(rep.folio) ? '' : ' <span class="text-amber-600 font-sans">· sin enviar</span>'}</span>
+                                <span class="font-mono font-bold text-indigo-700">Folio: ${escHTML(displayFolio)}${rep.anterior ? ' <span class="text-slate-500 font-sans">· v7</span>' : ''}${getFoliosSincronizados().includes(rep.folio) ? '' : ' <span class="text-amber-600 font-sans">· sin enviar</span>'}</span>
                             </div>
                             <p class="text-[11px] text-slate-600 line-clamp-2 italic mt-1">"${escHTML(rep.eventDescription)}"</p>
                         </div>
@@ -1436,7 +1441,46 @@
         updateFormType();
 
         // Al abrir, trae en silencio las notas nuevas de los reportes de este dispositivo
+        // Reportes capturados con la v7 que ya están en la nube a nombre de este usuario.
+        // Solo se agregan los que faltan: nada local se sobrescribe ni se borra.
+        async function traerAnteriores(silencioso) {
+            const statusEl = document.getElementById('syncStatus');
+            if (!navigator.onLine) { if (!silencioso) alert("Se necesita internet para traer tus reportes anteriores."); return; }
+            if (!silencioso) { statusEl.classList.remove('hidden'); statusEl.textContent = "⬇️ Buscando tus reportes anteriores..."; }
+            try {
+                const d = await SEJ.api('misReportesAnteriores');
+                const hist = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+                const folios = new Set(hist.map(r => String(r.folio)));
+                const ids = new Set(hist.map(r => r.id));
+                let n = 0;
+                (d.reportes || []).forEach(r => {
+                    const folio = String(r.folio || '');
+                    if (!folio || folios.has(folio)) return;          // ya está en este aparato
+                    let id = Number(r.id);
+                    if (!Number.isFinite(id) || id <= 0) id = Date.now();
+                    while (ids.has(id)) id++;                           // id único en este aparato
+                    ids.add(id); folios.add(folio);
+                    hist.push(Object.assign({}, r, { id, folio, anterior: true, fotos: [] }));
+                    marcarComoSincronizado(folio);                      // ya está en la nube: no se reenvía
+                    n++;
+                });
+                localStorage.setItem('sej_reports_history', JSON.stringify(hist));
+                localStorage.setItem('sej_anteriores_revisado', '1');
+                if (n) { try { await descargarSeguimientos(true); } catch (e) { } }
+                calculateNextFolio(); renderHistory();
+                if (!silencioso || n) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.textContent = n ? `✅ Se agregaron ${n} reporte(s) anteriores a tu historial.`
+                        : "✅ No hay reportes anteriores nuevos. Si te falta alguno, pide a Dirección que lo asigne a tu usuario.";
+                    setTimeout(() => statusEl.classList.add('hidden'), 8000);
+                }
+            } catch (e) {
+                if (!silencioso) { statusEl.textContent = `❌ ${e.message}`; setTimeout(() => statusEl.classList.add('hidden'), 8000); }
+            }
+        }
+
         sejBarra('index.html?cuenta', 'Mi cuenta');
+        if (navigator.onLine && !localStorage.getItem('sej_anteriores_revisado')) traerAnteriores(true);
         if (navigator.onLine) {
             descargarSeguimientos(true).then(n => { if (n) renderHistory(); }).catch(() => {});
             SEJ.actualizarContadores().then(() => calculateNextFolio()).catch(() => {});
