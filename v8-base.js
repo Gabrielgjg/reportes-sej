@@ -206,14 +206,18 @@ const SEJFotos = (() => {
       <div style="border:1px dashed #94a3b8;border-radius:8px;padding:.6rem .7rem;background:#f8fafc">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap">
           <span style="font-size:.75rem;font-weight:600;color:#475569">📷 Evidencia fotográfica (opcional, hasta ${MAX})</span>
-          ${seleccion.length < MAX ? `<label style="font-size:.75rem;font-weight:700;color:#1D3557;cursor:pointer;border:1px solid #1D3557;border-radius:6px;padding:.25rem .6rem;background:#fff">
-            Agregar foto<input type="file" accept="image/*" multiple hidden></label>` : ""}
+          ${seleccion.length < MAX ? `<span style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <label style="font-size:.75rem;font-weight:700;color:#fff;cursor:pointer;border:1px solid #1D3557;border-radius:6px;padding:.3rem .65rem;background:#1D3557">
+              📷 Tomar foto<input type="file" accept="image/*" capture="environment" data-camara hidden></label>
+            <label style="font-size:.75rem;font-weight:700;color:#1D3557;cursor:pointer;border:1px solid #1D3557;border-radius:6px;padding:.3rem .65rem;background:#fff">
+              🖼️ Elegir de galería<input type="file" accept="image/*" multiple data-galeria hidden></label>
+          </span>` : ""}
         </div>
         ${seleccion.length ? `<div style="display:flex;gap:.6rem;margin-top:.6rem;flex-wrap:wrap">${miniaturas}</div>` : ""}
         <div data-estado style="font-size:.7rem;color:#64748b;margin-top:.35rem">${seleccion.length ? "Se guardarán con el reporte. Solo las verás tú y Dirección." : ""}</div>
       </div>`;
-    const input = cont.querySelector('input[type="file"]');
-    if (input) input.onchange = async () => {
+    // "Tomar foto" abre la cámara directo; "Elegir de galería" permite varias a la vez.
+    cont.querySelectorAll('input[type="file"]').forEach(input => input.onchange = async () => {
       const archivos = [...input.files].slice(0, MAX - seleccion.length);
       cont.querySelector("[data-estado]").textContent = "Preparando foto…";
       for (const a of archivos) {
@@ -221,7 +225,7 @@ const SEJFotos = (() => {
       }
       if (input.files.length > archivos.length) alert(`Solo se permiten ${MAX} fotos por reporte.`);
       pintarSeleccion();
-    };
+    });
     cont.querySelectorAll("[data-quitar]").forEach(b => b.onclick = () => { seleccion.splice(Number(b.dataset.quitar), 1); pintarSeleccion(); });
   }
   function limpiar() { seleccion = []; pintarSeleccion(); }
