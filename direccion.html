@@ -557,7 +557,9 @@
                 renderHistory();
                 refrescarSeguimientosPreview();
 
+                const enAlerta = pintarAlertas().length;
                 statusEl.textContent = `✅ Listo: ${enviadosDir} reporte(s) enviado(s), ${nuevos} reporte(s) nuevo(s), ${notas.enviados} nota(s) enviada(s), ${notasNuevas} nota(s) recibida(s).`
+                    + (enAlerta ? ` ⚠️ ${enAlerta} alumno(s) con ${ALERTA_REPORTES} o más reportes en ${ALERTA_DIAS} días.` : '')
                     + (notas.pendientes ? ` Quedaron ${notas.pendientes} nota(s) sin enviar.` : '')
                 + (fotos.pendientes ? ` Quedaron ${fotos.pendientes} foto(s) sin subir.` : '');
                 if (renumerados.length) alert('Estos reportes cambiaron de folio:\n\n' + renumerados.map(x => `${x.folioAnterior}  →  ${x.folio}`).join('\n') + '\n\nSi ya los imprimiste, reimprímelos.');
@@ -1047,6 +1049,7 @@
                             <button onclick="deleteReport(${rep.id})" class="text-[10px] text-red-500 hover:text-red-700 font-semibold px-2 py-1 bg-red-50 rounded">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
+                            ${marcaAlerta(rep)}
                             ${SEJFotos.boton(rep)}
                             <button onclick="abrirSeguimiento('${escHTML(rep.folio || '')}')" class="text-[10px] bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-white font-bold px-2.5 py-1 rounded transition-colors flex items-center gap-1">
                                 <i class="fa-solid fa-comment-medical"></i> Seguimiento${numNotas ? ` (${numNotas})` : ''}
@@ -1613,7 +1616,75 @@
             setTimeout(quitar, 1000);
         }
 
+        // ---------- Alumnos con varios reportes recientes ----------
+        const ALERTA_REPORTES = 3, ALERTA_DIAS = 30;
+        let alertaPorClave = {};
+        const normAlumno = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+        // Mismo alumno: por su código del padrón; si no tiene, por nombre
+        function claveAlumno(r) { return r.alumnoCodigo ? 'c:' + r.alumnoCodigo : 'n:' + normAlumno(r.studentName); }
+        function fechaReporte(r) {
+            const f = String(r.eventDate || '').slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return new Date(f + 'T12:00:00');
+            const t = Number(r.id) > 1e12 ? new Date(Number(r.id)) : (r.timestamp ? new Date(r.timestamp) : null);
+            return t && !isNaN(t) ? t : null;
+        }
+        function alumnosEnAlerta() {
+            const hist = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
+            const desde = Date.now() - ALERTA_DIAS * 864e5, hasta = Date.now() + 864e5;
+            const grupos = {};
+            // el código manda: reportes sin código del mismo nombre se suman al alumno con código
+            const codigoPorNombre = {};
+            hist.forEach(r => { if (r.alumnoCodigo && r.studentName) codigoPorNombre[normAlumno(r.studentName)] = r.alumnoCodigo; });
+            const clave = r => r.alumnoCodigo ? 'c:' + r.alumnoCodigo : (codigoPorNombre[normAlumno(r.studentName)] ? 'c:' + codigoPorNombre[normAlumno(r.studentName)] : 'n:' + normAlumno(r.studentName));
+            hist.forEach(r => {
+                if (!String(r.studentName || '').trim()) return;
+                const f = fechaReporte(r);
+                if (!f || f.getTime() < desde || f.getTime() > hasta) return;
+                const k = clave(r);
+                const g = grupos[k] || (grupos[k] = { clave: k, nombre: r.studentName, grado: r.studentGrade, grupo: r.studentGroup, n: 0, graves: 0, ultima: 0 });
+                g.n++;
+                if (r.format === 'grave') g.graves++;
+                if (f.getTime() >= g.ultima) { g.ultima = f.getTime(); g.nombre = r.studentName; g.grado = r.studentGrade; g.grupo = r.studentGroup; }
+            });
+            const lista = Object.values(grupos).filter(g => g.n >= ALERTA_REPORTES).sort((a, b) => b.n - a.n || b.ultima - a.ultima);
+            alertaPorClave = {};
+            lista.forEach(g => { alertaPorClave[g.clave] = g; });
+            Object.keys(codigoPorNombre).forEach(nom => { const g = alertaPorClave['c:' + codigoPorNombre[nom]]; if (g) alertaPorClave['n:' + nom] = g; });
+            return lista;
+        }
+        function marcaAlerta(rep) {
+            const g = alertaPorClave[claveAlumno(rep)];
+            return g ? `<span title="${g.n} reportes en los últimos ${ALERTA_DIAS} días" class="text-[10px] bg-red-50 text-red-700 border border-red-200 font-bold px-2 py-1 rounded">⚠️ ${g.n} en ${ALERTA_DIAS} días</span>` : '';
+        }
+        function pintarAlertas() {
+            let caja = document.getElementById('sejAlertas');
+            if (!caja) {
+                caja = document.createElement('div'); caja.id = 'sejAlertas'; caja.className = 'no-print';
+                const barra = document.body.firstElementChild;
+                barra.parentNode.insertBefore(caja, barra.nextSibling);
+            }
+            const lista = alumnosEnAlerta();
+            if (!lista.length) { caja.innerHTML = ''; return lista; }
+            caja.innerHTML = `
+              <div style="max-width:80rem;margin:.75rem auto 0;padding:0 1rem;font-family:'Segoe UI',Roboto,system-ui,sans-serif">
+                <div style="background:#FEF3F2;border:1px solid #FECDCA;border-radius:10px;padding:.75rem 1rem">
+                  <div style="font-weight:700;color:#B42318;margin-bottom:.4rem">⚠️ ${lista.length} alumno(s) con ${ALERTA_REPORTES} o más reportes en los últimos ${ALERTA_DIAS} días</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+                    ${lista.map((g, i) => `<button type="button" data-alerta="${i}" style="border:1px solid #FDA29B;background:#fff;border-radius:8px;padding:.3rem .65rem;font-size:.82rem;cursor:pointer;text-align:left">
+                      <b>${escHTML(g.nombre)}</b> <span style="color:#667085">${escHTML(g.grado || '')} ${escHTML(g.grupo || '')}</span>
+                      · ${g.n} reportes${g.graves ? ` <span style="color:#B42318">(${g.graves} grave${g.graves > 1 ? 's' : ''})</span>` : ''}</button>`).join('')}
+                  </div>
+                  <div style="font-size:.75rem;color:#667085;margin-top:.4rem">Toca un nombre para abrir su expediente completo.</div>
+                </div>
+              </div>`;
+            caja.querySelectorAll('[data-alerta]').forEach(b => b.onclick = () => abrirExpediente(lista[Number(b.dataset.alerta)].nombre));
+            return lista;
+        }
+        const renderHistorySinAlertas = renderHistory;
+        renderHistory = function () { pintarAlertas(); return renderHistorySinAlertas.apply(this, arguments); };
+
         sejBarra('index.html', 'Administración');
+        pintarAlertas();
 
         updateFormType();
     </script>
