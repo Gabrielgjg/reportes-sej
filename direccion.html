@@ -439,6 +439,7 @@
         const SCRIPT_URL = SEJ.cfg.url;
         document.getElementById('directivoName').value = SEJ.usuario.nombre;
         SEJFotos.montar(document.getElementById('sejFotosCaptura'));
+        SEJPadron.montar();
 
         // ---------- Utilidades de Dirección ----------
         const DIR_SYNC_KEY = 'sej_dir_synced_folios';
@@ -881,7 +882,7 @@
         }
 
         function resetFields() {
-            SEJFotos.limpiar();
+            SEJFotos.limpiar(); SEJPadron.limpiar();
             reporteAbiertoFolio = null;
             mostrarBannerConsulta();
             refrescarSeguimientosPreview();
@@ -941,6 +942,7 @@
                 customContent: document.getElementById('customContent')?.value || ''
             };
 
+            report.alumnoCodigo = SEJPadron.codigoActual();
             report.fotos = SEJFotos.guardarSeleccion(report);
             let internalHistory = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
             internalHistory.push(report);
