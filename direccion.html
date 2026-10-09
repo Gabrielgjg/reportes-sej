@@ -557,6 +557,7 @@
                 renderHistory();
                 refrescarSeguimientosPreview();
 
+                localStorage.setItem('sej_ultima_sync', new Date().toISOString());
                 const enAlerta = pintarAlertas().length;
                 statusEl.textContent = `✅ Listo: ${enviadosDir} reporte(s) enviado(s), ${nuevos} reporte(s) nuevo(s), ${notas.enviados} nota(s) enviada(s), ${notasNuevas} nota(s) recibida(s).`
                     + (enAlerta ? ` ⚠️ ${enAlerta} alumno(s) con ${ALERTA_REPORTES} o más reportes en ${ALERTA_DIAS} días.` : '')
@@ -1685,6 +1686,11 @@
 
         sejBarra('index.html', 'Administración');
         pintarAlertas();
+        // Llegó desde el aviso del Inicio: abre ese expediente
+        (() => {
+            const nombre = new URLSearchParams(location.search).get('expediente');
+            if (nombre) { history.replaceState(null, '', 'direccion.html'); setTimeout(() => abrirExpediente(nombre), 300); }
+        })();
 
         updateFormType();
     </script>
