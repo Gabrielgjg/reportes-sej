@@ -556,7 +556,7 @@ function pintarInicio() {
         <div class="ejemplo">Tus folios se ven así: ${esc(ejemplo)}</div>
       </div>
     </div>
-    ${u.rol === "direccion" ? `
+    ${u.rol === "direccion" ? avisoAlumnosHtml() + `
       <div class="bloque">
         <h2>Administración</h2>
         <p>Desde aquí das de alta al personal, asignas los reportes que se capturaron antes con las terminales v7 y revisas quién ha entrado al sistema.</p>
@@ -570,6 +570,58 @@ function pintarInicio() {
         <p><a class="btn" href="captura.html" style="display:inline-block;text-decoration:none">Capturar reportes</a></p>
       </div>`}
   `;
+}
+
+// ------------------------------------------------------------
+//  Dirección: alumnos con 3 o más reportes en 30 días
+//  (con los reportes que la terminal de Dirección descargó en este aparato)
+// ------------------------------------------------------------
+const ALERTA_REPORTES = 3, ALERTA_DIAS = 30;
+function alumnosEnAlerta(u) {
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem("sejv8_" + u.usuario + "_reports_history")) || []; } catch (e) { }
+  const norm = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+  const fecha = r => {
+    const f = String(r.eventDate || "").slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return new Date(f + "T12:00:00");
+    const t = Number(r.id) > 1e12 ? new Date(Number(r.id)) : (r.timestamp ? new Date(r.timestamp) : null);
+    return t && !isNaN(t) ? t : null;
+  };
+  const codigoPorNombre = {};
+  hist.forEach(r => { if (r.alumnoCodigo && r.studentName) codigoPorNombre[norm(r.studentName)] = r.alumnoCodigo; });
+  const desde = Date.now() - ALERTA_DIAS * 864e5, hasta = Date.now() + 864e5, grupos = {};
+  hist.forEach(r => {
+    if (!String(r.studentName || "").trim()) return;
+    const f = fecha(r);
+    if (!f || f.getTime() < desde || f.getTime() > hasta) return;
+    const cod = r.alumnoCodigo || codigoPorNombre[norm(r.studentName)];
+    const k = cod ? "c:" + cod : "n:" + norm(r.studentName);
+    const g = grupos[k] || (grupos[k] = { nombre: r.studentName, grado: r.studentGrade, grupo: r.studentGroup, n: 0, graves: 0, ultima: 0 });
+    g.n++;
+    if (r.format === "grave") g.graves++;
+    if (f.getTime() >= g.ultima) Object.assign(g, { ultima: f.getTime(), nombre: r.studentName, grado: r.studentGrade, grupo: r.studentGroup });
+  });
+  return Object.values(grupos).filter(g => g.n >= ALERTA_REPORTES).sort((a, b) => b.n - a.n || b.ultima - a.ultima);
+}
+
+function avisoAlumnosHtml() {
+  const u = ses.usuario;
+  const ultima = localStorage.getItem("sejv8_" + u.usuario + "_ultima_sync");
+  const cuando = ultima ? `Datos de la última sincronización: ${fechaCorta(ultima)}` : "Aún no has sincronizado en este aparato";
+  const lista = alumnosEnAlerta(u);
+  if (!lista.length) {
+    return `<div class="bloque" style="border-left:6px solid var(--ok)">
+      <h2 style="margin-bottom:.3rem">Sin alertas de alumnos</h2>
+      <p class="ayuda" style="margin:0">Ningún alumno tiene ${ALERTA_REPORTES} o más reportes en los últimos ${ALERTA_DIAS} días.<br>${cuando}. <a href="direccion.html">Abrir reportes</a> para sincronizar.</p></div>`;
+  }
+  return `<div class="bloque" style="border:1px solid #FECDCA;border-left:6px solid var(--alerta);background:#FEF3F2">
+    <h2 style="color:var(--alerta)">⚠️ ${lista.length} alumno(s) con ${ALERTA_REPORTES} o más reportes en ${ALERTA_DIAS} días</h2>
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin:.6rem 0">
+      ${lista.map(g => `<a href="direccion.html?expediente=${encodeURIComponent(g.nombre)}" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;background:#fff;border:1px solid #FDA29B;border-radius:8px;padding:.55rem .8rem;text-decoration:none;color:var(--texto)">
+        <span><b>${esc(g.nombre)}</b> <span style="color:var(--suave)">${esc(g.grado || "")} ${esc(g.grupo || "")}</span></span>
+        <span style="white-space:nowrap;font-weight:700;color:var(--alerta)">${g.n} reportes${g.graves ? ` · ${g.graves} grave${g.graves > 1 ? "s" : ""}` : ""} ›</span></a>`).join("")}
+    </div>
+    <p class="ayuda" style="margin:0">Toca un alumno para abrir su expediente.<br>${cuando}.</p></div>`;
 }
 
 function pintarRed() {
