@@ -536,17 +536,18 @@
                 else { fallo = true; break; }
             }
 
-            let notas = { enviados: 0, pendientes: 0 }, notasNuevas = 0, fotos = { subidas: 0, pendientes: 0 };
+            let notas = { enviados: 0, pendientes: 0 }, notasNuevas = 0, fotos = { subidas: 0, pendientes: 0 }, errorNotas = '';
             if (!fallo) {
                 fotos = await SEJFotos.subirPendientes((i, n) => { statusEl.textContent = `📷 Subiendo foto ${i} de ${n}...`; });
                 statusEl.textContent = "⬆️ Enviando notas de seguimiento...";
                 notas = await enviarSeguimientosPendientes();
-                try {
-                    statusEl.textContent = "⬇️ Revisando notas de tus reportes...";
-                    notasNuevas = await descargarSeguimientos(true);
-                    await SEJ.actualizarContadores();
-                } catch (e) { fallo = true; }
             }
+            // Las notas de Dirección se reciben aunque algún envío haya quedado pendiente
+            try {
+                statusEl.textContent = "⬇️ Revisando notas de tus reportes...";
+                notasNuevas = await descargarSeguimientos(true);
+            } catch (e) { fallo = true; errorNotas = e.message || 'sin conexión'; }
+            try { await SEJ.actualizarContadores(); } catch (e) { }
 
             calculateNextFolio();
             renderHistory();
@@ -554,11 +555,11 @@
 
             const partes = [`${enviados} reporte(s) enviado(s)`, `${fotos.subidas} foto(s)`, `${notas.enviados} nota(s) enviada(s)`, `${notasNuevas} nota(s) recibida(s)`];
             statusEl.textContent = (fallo || notas.pendientes > 0 || fotos.pendientes > 0)
-                ? `⚠️ ${partes.join(', ')}. Quedaron pendientes; revisa tu conexión e intenta de nuevo.`
+                ? `⚠️ ${partes.join(', ')}. ${errorNotas ? 'No se pudieron revisar las notas (' + errorNotas + '). ' : ''}Quedaron pendientes; revisa tu conexión e intenta de nuevo.`
                 : `✅ ${partes.join(', ')}.`;
             avisoRenumerado(renumerados);
             if (rechazados.length) alert(`Estos reportes no se pudieron enviar:\n\n${rechazados.join('\n')}\n\nSiguen guardados en este aparato. Avisa a Dirección.`);
-            setTimeout(() => statusEl.classList.add('hidden'), 7000);
+            setTimeout(() => statusEl.classList.add('hidden'), 12000);
         }
 
         function switchTab(tab) {
