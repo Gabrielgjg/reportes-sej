@@ -191,7 +191,9 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
     <div class="menu" id="menuCuenta" hidden>
       <button id="mInstalar" data-instalar-link hidden>Instalar en este aparato</button>
       <button id="mCambiar">Cambiar mi contraseña</button>
+      <button id="mActualizar">Actualizar la app</button>
       <button id="mSalir">Cerrar sesión</button>
+      <div style="padding:.5rem 1rem;font-size:.75rem;color:var(--suave);border-top:1px solid var(--linea)">Versión de la app: <b id="verApp"></b></div>
     </div>
     <nav class="pestanas" id="pestanas" role="tablist"></nav>
   </header>
@@ -266,7 +268,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 
 <script>
 "use strict";
-const APP_VERSION = "8.3";
+const APP_VERSION = "8.6";
 const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
 const ROLES = {
   prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
@@ -888,6 +890,19 @@ function confirmar(titulo, texto, si, peligro) {
   });
 }
 
+// Descarga de nuevo la app completa (lo capturado y la sesión se conservan)
+$("verApp").textContent = APP_VERSION;
+$("mActualizar").addEventListener("click", async () => {
+  $("menuCuenta").hidden = true;
+  if (!navigator.onLine) { toast("Para actualizar se necesita internet."); return; }
+  toast("Actualizando la app…");
+  try {
+    if ("caches" in window) for (const k of await caches.keys()) await caches.delete(k);
+    if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+  } catch (e) { }
+  setTimeout(() => location.reload(), 600);
+});
+
 // ------------------------------------------------------------
 //  Instalar como app
 // ------------------------------------------------------------
@@ -954,7 +969,7 @@ if (ses && !sesionVigente(ses)) { ses = null; localStorage.removeItem(K.ses); $(
 mostrar();
 pintarInstalar();
 refrescarSesion();
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => { });
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => { });
 </script>
 </body>
 </html>

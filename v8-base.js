@@ -5,6 +5,7 @@
 //  • Separa los datos guardados en el aparato por usuario
 // ============================================================
 "use strict";
+const SEJ_VERSION = "8.6";
 
 const SEJ = (() => {
   const LS = window.localStorage;
@@ -110,6 +111,7 @@ function sejBarra(destinoCuenta, textoCuenta) {
         <b style="flex:1;min-width:10rem">Reportes SEJ · ${SEJ.ROL.etiqueta}</b>
         <span id="sejRed" style="font-size:.8rem;padding:.1rem .55rem;border-radius:99px;background:rgba(255,255,255,.15)"></span>
         <span style="font-size:.9rem">${String(SEJ.usuario.nombre).replace(/[&<>"']/g, "")} (${SEJ.usuario.iniciales})</span>
+        <span style="font-size:.72rem;opacity:.7" title="Versión de la app">v${SEJ_VERSION}</span>
         <a href="${destinoCuenta}" style="color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:8px;padding:.3rem .7rem;text-decoration:none;font-size:.9rem">${textoCuenta}</a>
       </div>
     </div>`;
@@ -125,7 +127,7 @@ function sejBarra(destinoCuenta, textoCuenta) {
   window.addEventListener("offline", red);
 }
 
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => { });
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => { });
 
 // ============================================================
 //  FOTOS DE EVIDENCIA

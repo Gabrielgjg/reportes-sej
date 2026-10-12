@@ -1,6 +1,6 @@
 // Reportes SEJ — funciona sin conexión.
 // La app se guarda en el aparato; las peticiones al servidor nunca se guardan.
-const CACHE = "reportes-sej-v8-4";
+const CACHE = "reportes-sej-v8-6";
 const ARCHIVOS = ["./", "./index.html", "./captura.html", "./direccion.html", "./v8-base.js", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"];
 // Diseño de las terminales (se guardan para funcionar sin conexión)
 const EXTERNOS = [
@@ -11,7 +11,7 @@ const HOSTS_EXTERNOS = ["cdn.tailwindcss.com", "cdnjs.cloudflare.com", "fonts.go
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(async c => {
-    await c.addAll(ARCHIVOS);
+    await c.addAll(ARCHIVOS.map(u => new Request(u, { cache: "reload" })));
     await Promise.all(EXTERNOS.map(u => fetch(u, { mode: "no-cors" }).then(r => c.put(u, r)).catch(() => { })));
   }).then(() => self.skipWaiting()));
 });
@@ -38,7 +38,7 @@ self.addEventListener("fetch", e => {
 
   if (req.mode === "navigate") {
     // Página: primero la versión nueva; si no hay internet, la guardada.
-    e.respondWith(fetch(req).then(r => {
+    e.respondWith(fetch(new Request(req.url, { cache: "no-cache", credentials: "same-origin" })).then(r => {
       const copia = r.clone();
       caches.open(CACHE).then(c => c.put(req, copia));
       return r;
@@ -46,7 +46,7 @@ self.addEventListener("fetch", e => {
     return;
   }
   // Archivos propios: primero la versión nueva; sin internet, la guardada.
-  e.respondWith(fetch(req).then(r => {
+  e.respondWith(fetch(req, { cache: "no-cache" }).then(r => {
     const copia = r.clone();
     caches.open(CACHE).then(c => c.put(req, copia));
     return r;
