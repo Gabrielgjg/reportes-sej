@@ -234,7 +234,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 <dialog id="dTemporal">
   <div class="cuerpo">
     <h2 id="dtTitulo">Usuario creado</h2>
-    <p>Entrégale estos datos en persona. La contraseña temporal solo se muestra esta vez; al entrar se le pedirá crear la suya.</p>
+    <p>Entrégale estos datos en persona. La contraseña temporal solo se muestra esta vez; al entrar se le pedirá crear la suya. <b>Copiar datos</b> incluye también el enlace de la app y la dirección del servidor.</p>
     <div class="credencial-nueva" id="dtDatos"></div>
     <div class="botones">
       <button class="btn sec" type="button" id="dtCopiar">Copiar datos</button>
@@ -786,7 +786,7 @@ function mostrarTemporal(titulo, u, pass) {
   $("dtTitulo").textContent = titulo;
   $("dtDatos").innerHTML = `${esc(u.nombre)}<br>Usuario: <b>${esc(u.usuario)}</b><br>Contraseña temporal: <b>${esc(pass)}</b>`;
   $("dtCopiar").onclick = async () => {
-    const texto = `Reportes SEJ\nEntra en: ${urlApp()}\nUsuario: ${u.usuario}\nContraseña temporal: ${pass}\nAl entrar se te pedirá crear tu propia contraseña.`;
+    const texto = `Reportes SEJ\n1) Abre la app: ${urlApp()}\n2) La primera vez, en "Dirección del servidor" pega:\n${cfg.url}\n3) Usuario: ${u.usuario}\n4) Contraseña temporal: ${pass}\nAl entrar se te pedirá crear tu propia contraseña.`;
     try { await navigator.clipboard.writeText(texto); toast("Datos copiados."); }
     catch (e) { toast("No se pudo copiar; anótalos a mano."); }
   };
