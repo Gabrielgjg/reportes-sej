@@ -5,7 +5,7 @@
 //  • Separa los datos guardados en el aparato por usuario
 // ============================================================
 "use strict";
-const SEJ_VERSION = "8.6";
+const SEJ_VERSION = "8.7";
 
 const SEJ = (() => {
   const LS = window.localStorage;
@@ -140,6 +140,8 @@ const SEJFotos = (() => {
   const DB = `sejv8_fotos_${SEJ.usuario.usuario}`;
   let seleccion = []; // [{ id, datos, mini, ancho, alto }]
   let dbp = null;
+  let cambioCb = null; // lo usa el borrador de la captura para guardar las fotos elegidas
+  const notificar = () => { if (cambioCb) cambioCb(); };
 
   function db() {
     if (dbp) return dbp;
@@ -227,10 +229,16 @@ const SEJFotos = (() => {
       }
       if (input.files.length > archivos.length) alert(`Solo se permiten ${MAX} fotos por reporte.`);
       pintarSeleccion();
+      notificar();
     });
-    cont.querySelectorAll("[data-quitar]").forEach(b => b.onclick = () => { seleccion.splice(Number(b.dataset.quitar), 1); pintarSeleccion(); });
+    cont.querySelectorAll("[data-quitar]").forEach(b => b.onclick = () => { seleccion.splice(Number(b.dataset.quitar), 1); pintarSeleccion(); notificar(); });
   }
   function limpiar() { seleccion = []; pintarSeleccion(); }
+  function seleccionActual() { return seleccion.slice(); }
+  function restaurarSeleccion(lista) {
+    seleccion = (lista || []).slice(0, MAX).map(f => ({ id: f.id, datos: f.datos, mini: f.mini, ancho: f.ancho, alto: f.alto }));
+    pintarSeleccion();
+  }
 
   // Al guardar el reporte: las fotos quedan en el aparato, pendientes de subir. Devuelve sus ids.
   function guardarSeleccion(reporte) {
@@ -381,7 +389,8 @@ const SEJFotos = (() => {
     }
   }
 
-  return { montar, limpiar, guardarSeleccion, subirPendientes, pendientes, guardarMeta, delReporte, boton, abrir, cerrar };
+  return { montar, limpiar, guardarSeleccion, subirPendientes, pendientes, guardarMeta, delReporte, boton, abrir, cerrar,
+           alCambiar: fn => { cambioCb = fn; }, seleccionActual, restaurarSeleccion };
 })();
 
 // ============================================================
@@ -513,6 +522,234 @@ const SEJPadron = (() => {
     if (!codigoActual()) { codigo = ""; elegido = null; }
     pintarEstado();
   }
+  // Para el borrador: a qué alumno del padrón estaba ligada la captura, y volver a ligarla al recuperarla
+  function estadoBorrador() { const c = codigoActual(); return c ? { codigo: c, nombre: elegido.nombre } : null; }
+  function restaurar(est) {
+    if (est && est.codigo) {
+      const a = alumnos().find(x => x.codigo === est.codigo);
+      const n = document.getElementById("studentName");
+      if (a && n && n.value === a.nombre) { codigo = a.codigo; elegido = a; }
+    }
+    cerrarLista(); pintarEstado();
+  }
 
-  return { montar, actualizar, codigoActual, limpiar, buscar, alumnos };
+  return { montar, actualizar, codigoActual, limpiar, buscar, alumnos, estadoBorrador, restaurar };
+})();
+
+// ============================================================
+//  Borrador de la captura
+//  Lo que se va escribiendo se guarda solo, en este aparato y por usuario, para que no se
+//  pierda si el celular bloquea la pantalla, se sale de la app, el sistema cierra la página
+//  para liberar memoria (pasa mucho al abrir la cámara) o se vuelve de otra pantalla.
+//  Al volver, la captura se recupera con un aviso. Se borra al guardar el reporte, al
+//  pulsar "Limpiar" o al descartarla. Un borrador de más de 7 días se descarta solo.
+// ============================================================
+const SEJBorrador = (() => {
+  const CLAVE = "sej_borrador";            // → sejv8_<usuario>_borrador
+  const CLAVE_NOTAS = "sej_segborrador";   // notas de seguimiento a medias, por folio
+  const CLAVE_ABIERTA = "sej_segabierta";  // nota que estaba abierta al salir
+  const VIDA_MS = 7 * 24 * 3600 * 1000;
+  const DBN = `sejv8_borrador_${SEJ.usuario.usuario}`;
+  const IDS = ["formatSelector", "schoolName", "schoolCct", "schoolTurn", "studentName", "studentGrade", "studentGroup",
+    "eventDate", "tutorName", "eventDescription", "actionApplied", "eventTime", "witnesses", "interventionPlan",
+    "appointmentDate", "appointmentTime", "missingTasks", "tutorAgreement", "customTitle", "customSubtitle", "customContent"];
+  // Si alguno de estos tiene texto (o hay fotos) vale la pena guardar; los demás traen valores de fábrica.
+  const TEXTOS = ["studentName", "eventDescription", "actionApplied", "witnesses", "interventionPlan", "missingTasks",
+    "tutorAgreement", "customTitle", "customSubtitle", "customContent"];
+  const el = id => document.getElementById(id);
+
+  let enConsulta = () => false, alRestaurar = () => { };
+  let pausado = false, iniciado = false, timer = null, firmaGuardada = "";
+
+  const leerCampos = () => { const o = {}; IDS.forEach(id => { const e = el(id); if (e && "value" in e) o[id] = e.value; }); return o; };
+  const firma = c => JSON.stringify(IDS.map(id => (c[id] === undefined ? null : c[id])));
+  const hayContenido = (c, nFotos) => nFotos > 0 || TEXTOS.some(id => String(c[id] || "").trim() !== "");
+
+  // ---------- Fotos del borrador: base de datos aparte, para no mezclarlas con las fotos por subir ----------
+  let dbp = null, cola = Promise.resolve();
+  function db() {
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      try {
+        const r = indexedDB.open(DBN, 1);
+        r.onupgradeneeded = () => r.result.createObjectStore("fotos", { keyPath: "id" });
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      } catch (e) { rej(e); }
+    });
+    return dbp;
+  }
+  const enCola = fn => { cola = cola.then(fn).catch(() => { }); return cola; };
+  function sincronizarFotos() {
+    const actuales = SEJFotos.seleccionActual();
+    return enCola(async () => {
+      const d = await db();
+      await new Promise((res, rej) => {
+        const t = d.transaction("fotos", "readwrite"), s = t.objectStore("fotos");
+        const q = s.getAllKeys();
+        q.onsuccess = () => {
+          const guardadas = new Set(q.result), vivas = new Set(actuales.map(f => f.id));
+          actuales.forEach(f => { if (!guardadas.has(f.id)) s.put({ id: f.id, datos: f.datos, mini: f.mini, ancho: f.ancho, alto: f.alto }); });
+          q.result.forEach(k => { if (!vivas.has(k)) s.delete(k); });
+        };
+        t.oncomplete = res; t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+      });
+    });
+  }
+  const borrarFotos = () => enCola(async () => {
+    const d = await db();
+    await new Promise(res => { const t = d.transaction("fotos", "readwrite"); t.objectStore("fotos").clear(); t.oncomplete = res; t.onerror = res; t.onabort = res; });
+  });
+  const leerFotos = () => cola.then(db).then(d => new Promise(res => {
+    const q = d.transaction("fotos").objectStore("fotos").getAll();
+    q.onsuccess = () => res(q.result || []); q.onerror = () => res([]);
+  })).catch(() => []);
+
+  // ---------- Guardar ----------
+  function quitarTexto() { try { localStorage.removeItem(CLAVE); } catch (e) { } }
+  function guardarAhora() {
+    clearTimeout(timer); timer = null;
+    if (pausado || enConsulta()) return;
+    const campos = leerCampos(), fotos = SEJFotos.seleccionActual();
+    // Nada que guardar, o es idéntico a lo que ya se guardó como reporte
+    if (!hayContenido(campos, fotos.length) || (!fotos.length && firma(campos) === firmaGuardada)) { quitarTexto(); return; }
+    try {
+      localStorage.setItem(CLAVE, JSON.stringify({ v: 1, t: Date.now(), campos, padron: SEJPadron.estadoBorrador(), fotoIds: fotos.map(f => f.id) }));
+    } catch (e) { /* sin espacio: se vuelve a intentar con el siguiente cambio */ }
+  }
+  const programar = e => {
+    if (pausado) return;
+    const t = e && e.target;
+    if (t && t.id && IDS.indexOf(t.id) < 0) return;
+    clearTimeout(timer); timer = setTimeout(guardarAhora, 500);
+  };
+
+  // ---------- Recuperar ----------
+  function haceCuanto(t) {
+    const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (m < 1) return "hace un momento";
+    if (m < 60) return `hace ${m} minuto${m === 1 ? "" : "s"}`;
+    const h = Math.round(m / 60);
+    if (h < 24) return `hace ${h} hora${h === 1 ? "" : "s"}`;
+    const d = Math.round(h / 24);
+    return `hace ${d} día${d === 1 ? "" : "s"}`;
+  }
+  function ocultarAviso() { const a = el("sejBorradorAviso"); if (a) a.remove(); }
+  function avisar(t) {
+    ocultarAviso();
+    const caja = document.createElement("div");
+    caja.id = "sejBorradorAviso"; caja.className = "no-print"; caja.setAttribute("role", "status");
+    caja.style.cssText = "background:#FFF8E6;border:1px solid #F0D79B;color:#6B4A00;border-radius:10px;padding:.6rem .8rem;margin:.5rem 0;font:600 .8rem 'Segoe UI',Roboto,system-ui,sans-serif;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap";
+    caja.innerHTML = `<span style="flex:1;min-width:12rem">Recuperamos tu captura sin guardar (${haceCuanto(t)}). Revísala y guárdala. Si estabas tomando una foto, tendrás que tomarla otra vez.</span>` +
+      `<button type="button" data-descartar style="border:1px solid #B45309;color:#7C2D12;background:#fff;border-radius:8px;padding:.3rem .7rem;font-weight:700;cursor:pointer">Descartar captura</button>`;
+    const ref = el("formatSelector");
+    const sitio = ref && ref.parentElement;
+    if (sitio && sitio.parentElement) sitio.parentElement.insertBefore(caja, sitio); else document.body.prepend(caja);
+    caja.querySelector("[data-descartar]").onclick = async () => {
+      if (!confirm("¿Descartar la captura recuperada? Se borrará de este aparato.")) return;
+      pausado = true;   // al recargar la página se dispara un guardado: que no vuelva a crear el borrador
+      quitarTexto(); await borrarFotos(); location.reload();
+    };
+  }
+  async function restaurar() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(CLAVE)); } catch (e) { d = null; }
+    if (!d || d.v !== 1 || !d.campos || typeof d.t !== "number" || Date.now() - d.t > VIDA_MS) { if (d) quitarTexto(); return false; }
+    if (enConsulta()) return false;
+    const ids = new Set(Array.isArray(d.fotoIds) ? d.fotoIds : []);
+    const fotos = (await leerFotos()).filter(f => ids.has(f.id));
+    if (!hayContenido(d.campos, fotos.length)) return false;
+    pausado = true;
+    try {
+      const sel = el("formatSelector");
+      if (sel && d.campos.formatSelector && sel.value !== d.campos.formatSelector && [...sel.options].some(o => o.value === d.campos.formatSelector)) {
+        sel.value = d.campos.formatSelector;
+        sel.dispatchEvent(new Event("change", { bubbles: true }));   // arma los campos propios de ese formato
+      }
+      IDS.forEach(id => {
+        if (id === "formatSelector" || !(id in d.campos)) return;
+        const e = el(id);
+        if (!e) return;
+        if (e.tagName === "SELECT" && ![...e.options].some(o => o.value === d.campos[id])) return;
+        e.value = d.campos[id];
+        e.dispatchEvent(new Event("input", { bubbles: true })); e.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      SEJPadron.restaurar(d.padron);
+      if (fotos.length) SEJFotos.restaurarSeleccion(fotos);
+      alRestaurar();
+    } finally { pausado = false; }
+    firmaGuardada = "";
+    avisar(d.t);
+    return true;
+  }
+
+  // ---------- Limpiar ----------
+  // Se toma como punto de partida lo que quede en pantalla: no se vuelve a guardar hasta que cambie algo.
+  function limpiar() { clearTimeout(timer); timer = null; firmaGuardada = firma(leerCampos()); quitarTexto(); ocultarAviso(); return borrarFotos(); }
+  // El reporte ya quedó guardado: el borrador sobra. Si se guardó mientras se consultaba otro reporte,
+  // el borrador anterior se conserva (es otra captura que sigue sin terminar).
+  function guardado(eraConsulta) {
+    firmaGuardada = firma(leerCampos());
+    if (!eraConsulta) limpiar();
+  }
+
+  // ---------- Notas de seguimiento a medias ----------
+  const nota = (() => {
+    const todo = () => { try { return JSON.parse(localStorage.getItem(CLAVE_NOTAS)) || {}; } catch (e) { return {}; } };
+    const poner = o => { try { if (Object.keys(o).length) localStorage.setItem(CLAVE_NOTAS, JSON.stringify(o)); else localStorage.removeItem(CLAVE_NOTAS); } catch (e) { } };
+    let pendiente = null, tn = null;
+    function leer(folio) { const m = todo()[String(folio)]; return (m && Date.now() - m.t < VIDA_MS) ? m.texto : ""; }
+    function guardar(folio, texto) {
+      const o = todo();
+      if (String(texto).trim()) o[String(folio)] = { t: Date.now(), texto: String(texto) }; else delete o[String(folio)];
+      poner(o);
+    }
+    function borrar(folio) { clearTimeout(tn); tn = null; pendiente = null; const o = todo(); delete o[String(folio)]; poner(o); }
+    function vaciar() {
+      clearTimeout(tn); tn = null;
+      if (!pendiente) return;
+      const f = pendiente.folio(); if (f) guardar(f, pendiente.area.value);
+      pendiente = null;
+    }
+    function marcarAbierto(folio) { try { localStorage.setItem(CLAVE_ABIERTA, JSON.stringify({ folio: String(folio), t: Date.now() })); } catch (e) { } }
+    function marcarCerrado() { vaciar(); try { localStorage.removeItem(CLAVE_ABIERTA); } catch (e) { } }
+    // Folio de la nota que estaba abierta (con texto sin guardar) cuando se salió de la app; solo las últimas 6 horas
+    function abiertaPendiente() {
+      try { const a = JSON.parse(localStorage.getItem(CLAVE_ABIERTA)); return (a && Date.now() - a.t < 6 * 3600 * 1000 && leer(a.folio)) ? a.folio : null; } catch (e) { return null; }
+    }
+    function vigilar(idArea, folioActivo) {
+      document.addEventListener("input", e => {
+        const a = e.target;
+        if (!a || a.id !== idArea) return;
+        clearTimeout(tn); pendiente = { area: a, folio: folioActivo }; tn = setTimeout(vaciar, 350);
+      });
+    }
+    return { leer, guardar, borrar, vaciar, marcarAbierto, marcarCerrado, abiertaPendiente, vigilar };
+  })();
+
+  function iniciar(opc) {
+    if (iniciado) return;
+    iniciado = true;
+    if (opc && opc.enConsulta) enConsulta = opc.enConsulta;
+    if (opc && opc.alRestaurar) alRestaurar = opc.alRestaurar;
+    document.addEventListener("input", programar, true);
+    document.addEventListener("change", programar, true);
+    SEJFotos.alCambiar(() => { if (!pausado) sincronizarFotos().then(guardarAhora); });
+    // Al salir de la pantalla (bloquear, cambiar de app, abrir la cámara) se guarda de inmediato, sin esperar
+    const vaciarTodo = () => { guardarAhora(); nota.vaciar(); };
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") vaciarTodo(); });
+    window.addEventListener("pagehide", vaciarTodo);
+    document.addEventListener("freeze", vaciarTodo);
+    return restaurar();
+  }
+
+  // Pase lo que pase aquí dentro, nunca debe estorbar el guardado de un reporte ni cerrar una ventana.
+  const seguro = (fn, porDefecto) => (...a) => { try { return fn(...a); } catch (e) { return porDefecto; } };
+  const notaSegura = {
+    leer: seguro(nota.leer, ""), guardar: seguro(nota.guardar), borrar: seguro(nota.borrar), vaciar: seguro(nota.vaciar),
+    marcarAbierto: seguro(nota.marcarAbierto), marcarCerrado: seguro(nota.marcarCerrado),
+    abiertaPendiente: seguro(nota.abiertaPendiente, null), vigilar: seguro(nota.vigilar)
+  };
+  return { iniciar: seguro(iniciar), restaurar: seguro(restaurar), limpiar: seguro(limpiar), guardado: seguro(guardado),
+           guardarAhora: seguro(guardarAhora), nota: notaSegura };
 })();
