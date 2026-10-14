@@ -135,7 +135,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-0.5">CCT</label>
-                            <input type="text" id="schoolCct" value="14DEST0059S" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                            <input type="text" id="schoolCct" value="14DEST0059Z" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-0.5">Turno</label>
@@ -1453,45 +1453,57 @@
         // Al abrir, trae en silencio las notas nuevas de los reportes de este dispositivo
         // Reportes capturados con la v7 que ya están en la nube a nombre de este usuario.
         // Solo se agregan los que faltan: nada local se sobrescribe ni se borra.
+        // Trae del servidor los reportes de ESTE usuario que no estén en este aparato (aparato nuevo, o
+        // después de cerrar sesión). El servidor solo entrega los del usuario que inició sesión, con sus fotos.
+        // Solo se agregan los que faltan: nada local se sobrescribe ni se borra. Devuelve cuántos agregó.
         async function traerAnteriores(silencioso) {
             const statusEl = document.getElementById('syncStatus');
-            if (!navigator.onLine) { if (!silencioso) alert("Se necesita internet para traer tus reportes anteriores."); return; }
-            if (!silencioso) { statusEl.classList.remove('hidden'); statusEl.textContent = "⬇️ Buscando tus reportes anteriores..."; }
+            if (!navigator.onLine) { if (!silencioso) alert("Se necesita internet para traer tus reportes."); return 0; }
+            if (!silencioso) { statusEl.classList.remove('hidden'); statusEl.textContent = "⬇️ Buscando tus reportes..."; }
             try {
-                const d = await SEJ.api('misReportesAnteriores');
+                const d = await SEJ.api('misReportes');
+                if (d.deshabilitado) { localStorage.setItem('sej_anteriores_revisado', String(Date.now())); return 0; }
                 const hist = JSON.parse(localStorage.getItem('sej_reports_history')) || [];
                 const folios = new Set(hist.map(r => String(r.folio)));
-                const ids = new Set(hist.map(r => r.id));
+                const ids = new Set(hist.map(r => String(r.id)));
                 let n = 0;
                 (d.reportes || []).forEach(r => {
                     const folio = String(r.folio || '');
-                    if (!folio || folios.has(folio)) return;          // ya está en este aparato
+                    if (!folio || folios.has(folio) || ids.has(String(r.id))) return;   // ya está en este aparato
+                    const rep = {};
+                    Object.keys(r).forEach(k => { rep[k] = (k === 'id' || k === 'fotos') ? r[k] : (r[k] === null || r[k] === undefined ? '' : String(r[k])); });
                     let id = Number(r.id);
                     if (!Number.isFinite(id) || id <= 0) id = Date.now();
-                    while (ids.has(id)) id++;                           // id único en este aparato
-                    ids.add(id); folios.add(folio);
-                    hist.push(Object.assign({}, r, { id, folio, anterior: true, fotos: [] }));
-                    marcarComoSincronizado(folio);                      // ya está en la nube: no se reenvía
+                    while (ids.has(String(id))) id++;                                   // id único en este aparato
+                    ids.add(String(id)); folios.add(folio);
+                    hist.push(Object.assign(rep, { id, folio, fotos: Array.isArray(r.fotos) ? r.fotos.map(String) : [] }));
+                    marcarComoSincronizado(folio);                                      // ya está en la nube: no se reenvía
                     n++;
                 });
                 localStorage.setItem('sej_reports_history', JSON.stringify(hist));
-                localStorage.setItem('sej_anteriores_revisado', '1');
+                localStorage.setItem('sej_anteriores_revisado', String(Date.now()));
                 if (n) { try { await descargarSeguimientos(true); } catch (e) { } }
                 calculateNextFolio(); renderHistory();
                 if (!silencioso || n) {
                     statusEl.classList.remove('hidden');
-                    statusEl.textContent = n ? `✅ Se agregaron ${n} reporte(s) anteriores a tu historial.`
-                        : "✅ No hay reportes anteriores nuevos. Si te falta alguno, pide a Dirección que lo asigne a tu usuario.";
+                    statusEl.textContent = n ? `✅ Recuperamos ${n} reporte(s) tuyos de la nube.` : "✅ Tus reportes ya están todos en este aparato.";
                     setTimeout(() => statusEl.classList.add('hidden'), 8000);
                 }
+                return n;
             } catch (e) {
                 if (!silencioso) { statusEl.textContent = `❌ ${e.message}`; setTimeout(() => statusEl.classList.add('hidden'), 8000); }
+                return 0;
             }
         }
 
         sejBarra('index.html?cuenta', 'Mi cuenta');
         if (navigator.onLine) {
-            descargarSeguimientos(true).then(n => { if (n) renderHistory(); }).catch(() => {});
+            // Primero recupera los reportes propios que falten (aparato nuevo o sesión nueva); luego sus notas de seguimiento.
+            // Si este aparato ya lo revisó hace menos de 12 horas, no vuelve a pedirlo.
+            const ultimaRevision = Number(localStorage.getItem('sej_anteriores_revisado')) || 0;
+            (Date.now() - ultimaRevision > 12 * 3600 * 1000 ? traerAnteriores(true) : Promise.resolve(0))
+                .catch(() => { })
+                .then(() => descargarSeguimientos(true).then(n => { if (n) renderHistory(); }).catch(() => { }));
             SEJ.actualizarContadores().then(() => calculateNextFolio()).catch(() => {});
         }
         // Al recuperar internet, envía lo pendiente sin que lo pidan
