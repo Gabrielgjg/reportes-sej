@@ -209,7 +209,7 @@
 
                     <div class="pt-3 border-t flex flex-col space-y-2">
                         <div class="grid grid-cols-2 gap-3">
-                            <button onclick="resetFields()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+                            <button onclick="resetFields(); Borrador.limpiar()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors">
                                 <i class="fa-solid fa-trash-can"></i> Limpiar Datos
                             </button>
                             <button onclick="saveReport()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 shadow-sm transition-colors">
@@ -436,6 +436,12 @@
         //  SINCRONIZACIÓN CON GOOGLE SHEETS — Weird Games Mx
         //  Pega aquí la URL de tu Apps Script desplegado
         // -------------------------------------------------------
+        // Borrador de la captura. Si por un momento esta pantalla convive con una v8-base.js más vieja
+        // (sin el borrador), el alias no hace nada y todo lo demás funciona igual.
+        const Borrador = (typeof SEJBorrador !== 'undefined') ? SEJBorrador : {
+            iniciar() { }, restaurar() { }, limpiar() { }, guardado() { },
+            nota: { leer: () => '', marcarAbierto() { }, marcarCerrado() { }, borrar() { }, vigilar() { }, abiertaPendiente: () => null }
+        };
         const SCRIPT_URL = SEJ.cfg.url;
         document.getElementById('directivoName').value = SEJ.usuario.nombre;
         SEJFotos.montar(document.getElementById('sejFotosCaptura'));
@@ -908,6 +914,7 @@
                 return;
             }
 
+            const eraConsulta = !!reporteAbiertoFolio;
             if (reporteAbiertoFolio) {
                 const nuevo = confirm(`Estás consultando el reporte ${reporteAbiertoFolio}, que ya está guardado y no se puede modificar.\n\n¿Guardar lo que ves como un reporte NUEVO de Dirección con otro folio?\n\n(Para añadir información al reporte original, cancela y usa "Agregar seguimiento".)`);
                 if (!nuevo) return;
@@ -951,6 +958,7 @@
             internalHistory.push(report);
             localStorage.setItem('sej_reports_history', JSON.stringify(internalHistory));
             SEJ.registrarFolio(report.folio);
+            Borrador.guardado(eraConsulta);
 
             alert(`Reporte guardado con éxito por Dirección. Folio: ${currentCalculatedFolio}`);
 
@@ -1269,13 +1277,15 @@
             const autorInput = document.getElementById('segAutor');
             autorInput.value = segAutorPorDefecto(); autorInput.readOnly = true;
             rolSel.value = SEG_ROL_DEFAULT; rolSel.disabled = true;
-            document.getElementById('segNota').value = '';
+            document.getElementById('segNota').value = Borrador.nota.leer(folio);
+            Borrador.nota.marcarAbierto(folio);
             renderSeguimientosModal();
             document.getElementById('segModal').classList.remove('hidden');
             document.getElementById('segNota').focus();
         }
 
         function cerrarSeguimiento() {
+            Borrador.nota.marcarCerrado();
             document.getElementById('segModal').classList.add('hidden');
             seguimientoFolioActivo = null;
         }
@@ -1319,6 +1329,7 @@
             const lista = getSeguimientos();
             lista.push(s);
             setSeguimientos(lista);
+            Borrador.nota.borrar(s.folio);
 
             document.getElementById('segNota').value = '';
             renderSeguimientosModal();
@@ -1414,6 +1425,7 @@
             mostrarBannerConsulta();
             refrescarSeguimientosPreview();
             resetFields();
+            Borrador.restaurar();
         }
 
 
@@ -1693,6 +1705,14 @@
         })();
 
         updateFormType();
+
+        // ---- Borrador de la captura: recupera lo que se estaba escribiendo si la pantalla se perdió ----
+        Borrador.iniciar({
+            enConsulta: () => !!reporteAbiertoFolio,
+            alRestaurar: () => { updatePreview(); calculateNextDirectionFolio(); }
+        });
+        Borrador.nota.vigilar('segNota', () => seguimientoFolioActivo);
+        (() => { const f = Borrador.nota.abiertaPendiente(); if (f) setTimeout(() => abrirSeguimiento(f), 400); })();
     </script>
 
     <!-- VENTANA DE NOTAS DE SEGUIMIENTO -->
