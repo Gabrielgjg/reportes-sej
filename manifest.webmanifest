@@ -1,8 +1,8 @@
 {
   "id": "/reportes-sej/",
-  "name": "Reportes SEJ",
-  "short_name": "Reportes SEJ",
-  "description": "Reportes de incidencias escolares: Prefectura, Gabinete y Dirección.",
+  "name": "CONVIVE360",
+  "short_name": "CONVIVE360",
+  "description": "Reportes de convivencia escolar: Prefectura, Gabinete y Dirección.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

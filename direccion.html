@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dirección · Reportes SEJ</title>
+    <title>Dirección · CONVIVE360</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -73,7 +73,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold tracking-tight">Sistema de Formatos y Reportes - Dirección</h1>
-                    <p class="text-xs text-slate-300">Consolidación de Prefecturas y Casos de Dirección • SEJ</p>
+                    <p class="text-xs text-slate-300">Consolidación de Prefecturas y Casos de Dirección · CONVIVE360</p>
                 </div>
             </div>
             <div class="bg-slate-800 px-3 py-1.5 rounded text-xs border border-slate-700">
@@ -126,12 +126,12 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">1. Seleccionar Formato Oficial</label>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">1. Seleccionar formato</label>
                         <select id="formatSelector" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium text-slate-700">
                             <option value="leve">Reporte de Incidencia LEVE (Bitácora)</option>
                             <option value="moderada">Reporte de Incidencia MODERADA (Aviso y Compromiso)</option>
-                            <option value="grave" selected>Acta de Hechos - Incidencia GRAVE (Protocolo SEJ)</option>
-                            <option value="citatorio">Citatorio Oficial a Padre / Madre o Tutor</option>
+                            <option value="grave" selected>Acta de hechos – Incidencia grave</option>
+                            <option value="citatorio">Citatorio a madre, padre o tutor</option>
                             <option value="omision">Reporte por Omitir Tareas o Actitudes (NEM)</option>
                             <option value="otro">Otro (Formato Libre / Personalizado)</option>
                         </select>
@@ -139,12 +139,16 @@
 
                     <div class="grid grid-cols-2 gap-3 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
                         <div class="col-span-2">
-                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">Nombre de la Escuela Secundaria</label>
-                            <input type="text" id="schoolName" value="Secundaria General No. 39" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">Dependencia (encabezado)</label>
+                            <input type="text" id="schoolDependency" placeholder="Ej.: Secretaría de Educación del Estado de Jalisco" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 mb-2">
+                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">Nivel o dirección (encabezado)</label>
+                            <input type="text" id="schoolDirection" placeholder="Ej.: Dirección General de Educación Secundaria General" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500 mb-2">
+                            <label class="block text-xs font-semibold text-slate-500 mb-0.5">Nombre de la escuela</label>
+                            <input type="text" id="schoolName" placeholder="Ej.: Secundaria General No. 39" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-0.5">CCT</label>
-                            <input type="text" id="schoolCct" value="14DEST0059S" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
+                            <input type="text" id="schoolCct" placeholder="Ej.: 14DEST0059Z" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-0.5">Turno</label>
@@ -293,19 +297,17 @@
                     <div>
                         <div class="flex justify-between items-start border-b border-black pb-3 mb-6">
                             <div class="flex items-center space-x-2">
-                                <div class="w-12 h-12 bg-slate-100 border border-slate-400 rounded flex items-center justify-center font-serif text-lg font-bold text-slate-800">
-                                    SEJ
-                                </div>
+                                
                                 <div class="text-left">
-                                    <div class="text-[11px] font-bold uppercase tracking-wider leading-tight">Secretaría de Educación del Estado de Jalisco</div>
-                                    <div class="text-[9px] text-slate-600 tracking-wide">Dirección General de Educación Secundaria General</div>
+                                    <div class="text-[11px] font-bold uppercase tracking-wider leading-tight" id="prevDependency"></div>
+                                    <div class="text-[9px] text-slate-600 tracking-wide" id="prevDirection"></div>
                                     <div class="text-[9px] text-slate-600 tracking-wide font-semibold" id="prevSchoolHead">Secundaria General No. 39</div>
                                 </div>
                             </div>
                             <div class="text-right text-[10px] text-slate-600">
                                 <div class="font-bold text-[11px] font-mono text-indigo-900">FOLIO: <span id="prevFolio">--</span></div>
-                                <div class="font-bold">Ciclo Escolar 2025 - 2026</div>
-                                <div id="prevCct">CCT: 14DEST0059Z</div>
+                                <div class="font-bold" id="prevCiclo"></div>
+                                <div id="prevCct"></div>
                                 <div id="prevTurn">Turno: Matutino</div>
                             </div>
                         </div>
@@ -385,8 +387,8 @@
                 { text: "Daño accidental menor a la infraestructura o mobiliario escolar derivado de conductas de juego rudo no permitido.", action: "Firma de acuerdo restaurativo para la reparación física del material con participación directa del alumno." }
             ],
             grave: [
-                { text: "Presunto acto de acoso escolar físico o agresión directa a un compañero dentro de las instalaciones en el cambio de módulo.", action: "Activación inmediata del Protocolo Estatal de Violencia Escolar SEJ, levantando acta circunstanciada de hechos y aviso a tutor." },
-                { text: "Consumo de sustancias no permitidas o portación de artículos peligrosos que atentan contra la seguridad del plantel escolar.", action: "Suspensión temporal formativa basada en el Marco de Convivencia SEJ, canalización para apoyo psicosocial y junta con directivos." },
+                { text: "Presunto acto de acoso escolar físico o agresión directa a un compañero dentro de las instalaciones en el cambio de módulo.", action: "Activación inmediata del protocolo estatal de atención a la violencia escolar, levantando acta circunstanciada de hechos y aviso a tutor." },
+                { text: "Consumo de sustancias no permitidas o portación de artículos peligrosos que atentan contra la seguridad del plantel escolar.", action: "Suspensión temporal formativa basada en la normativa de convivencia escolar del Estado de Jalisco, canalización para apoyo psicosocial y junta con directivos." },
                 { text: "Uso de redes sociales para la difamación, ciberacoso u hostigamiento sistemático dirigido a miembros de la comunidad escolar.", action: "Cita urgente con padres de familia, elaboración de compromiso de no agresión y canalización con psicopedagogía." }
             ],
             citatorio: [
@@ -664,8 +666,8 @@
                 `;
             } else if (format === 'grave') {
                 prevDocTitle.innerText = "Acta de Hechos (Incidencia Grave)";
-                prevDocSubtitle.innerText = "Protocolo de Actuación Escolar SEJ - Edición Vigente";
-                prevDocIntro.innerText = "Se constituye el presente documento oficial en la Dirección del plantel para dejar constancia circunstanciada y detallada de los hechos graves presentados, a fin de salvaguardar la integridad de la comunidad escolar.";
+                prevDocSubtitle.innerText = "Protocolo de actuación escolar vigente";
+                prevDocIntro.innerText = "Se constituye el presente documento en la Dirección del plantel para dejar constancia circunstanciada y detallada de los hechos graves presentados, a fin de salvaguardar la integridad de la comunidad escolar.";
                 
                 additionalFieldsArea.innerHTML = `
                     <div class="grid grid-cols-2 gap-2">
@@ -684,7 +686,7 @@
                     </div>
                 `;
             } else if (format === 'citatorio') {
-                prevDocTitle.innerText = "Citatorio Oficial para Padres de Familia";
+                prevDocTitle.innerText = "Citatorio para madre, padre o tutor";
                 prevDocSubtitle.innerText = "Secretaría de Educación del Estado de Jalisco";
                 prevDocIntro.innerText = "Estimado Padre, Madre de familia o Tutor. Por medio del presente, se le convoca a comparecer en las oficinas de la Dirección del plantel escolar a fin de tratar asuntos relacionados con el desarrollo socioemocional y conducta de su representado.";
 
@@ -720,7 +722,7 @@
                     </div>
                 `;
             } else if (format === 'otro') {
-                prevDocTitle.innerText = "Documento Oficial";
+                prevDocTitle.innerText = "Documento";
                 prevDocSubtitle.innerText = "Dirección Escolar";
                 prevDocIntro.innerText = "Por medio del presente documento se deja constancia de la situación descrita a continuación, en apego a los principios de la Nueva Escuela Mexicana y el Marco de Convivencia Escolar de Jalisco.";
 
@@ -769,8 +771,39 @@
             updatePreview();
         });
 
+        // Ciclo escolar según la fecha del suceso (de agosto a julio)
+        function cicloEscolarDe(fecha) {
+            const d = fecha ? new Date(fecha + 'T12:00:00') : new Date();
+            if (isNaN(d)) return '';
+            const a = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1;
+            return `Ciclo Escolar ${a} - ${a + 1}`;
+        }
+
+        // Los datos de la escuela se capturan una vez y quedan guardados en este aparato
+        (function recordarEscuela() {
+            const CLAVE = 'cv360_escuela';
+            const ids = ['schoolDependency', 'schoolDirection', 'schoolName', 'schoolCct', 'schoolTurn'];
+            let guardado = {};
+            try { guardado = JSON.parse(window.localStorage.getItem(CLAVE)) || {}; } catch (e) { }
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (guardado[id]) el.value = guardado[id];
+                el.addEventListener('input', guardar); el.addEventListener('change', guardar);
+            });
+            function guardar() {
+                const datos = {};
+                ids.forEach(id => { const el = document.getElementById(id); if (el) datos[id] = el.value; });
+                try { window.localStorage.setItem(CLAVE, JSON.stringify(datos)); } catch (e) { }
+            }
+        })();
+
         function updatePreview() {
             prevSchoolHead.innerText = schoolName.value;
+            const dep = document.getElementById('schoolDependency'), dir = document.getElementById('schoolDirection');
+            document.getElementById('prevDependency').innerText = dep ? dep.value : '';
+            document.getElementById('prevDirection').innerText = dir ? dir.value : '';
+            document.getElementById('prevCiclo').innerText = cicloEscolarDe(eventDate.value);
             prevCct.innerText = "CCT: " + schoolCct.value;
             prevTurn.innerText = "Turno: " + schoolTurn.value;
 
@@ -854,7 +887,7 @@
                 `;
                 legalFooterText.innerText = "* Fundamentado en el Marco Legal de la Nueva Escuela Mexicana y la Ley General de Educación...";
             } else if (format === 'otro') {
-                const customTitleVal = document.getElementById('customTitle')?.value.trim() || 'Documento Oficial';
+                const customTitleVal = document.getElementById('customTitle')?.value.trim() || 'Documento';
                 const customSubtitleVal = document.getElementById('customSubtitle')?.value.trim() || 'Dirección Escolar';
                 const customContentVal = document.getElementById('customContent')?.value.trim() || '';
 
@@ -867,11 +900,11 @@
                         <div class="bg-slate-50 p-2.5 rounded border border-slate-200 whitespace-pre-wrap">${escHTML(customContentVal)}</div>
                     `
                     : '';
-                legalFooterText.innerText = "* Documento de formato libre para atender situaciones no contempladas en los formatos oficiales predeterminados.";
+                legalFooterText.innerText = "* Documento de formato libre para atender situaciones no contempladas en los formatos predeterminados.";
             }
         }
 
-        const allInputs = [schoolName, schoolCct, schoolTurn, studentName, studentGrade, studentGroup, eventDate, tutorName, eventDescription];
+        const allInputs = [document.getElementById('schoolDependency'), document.getElementById('schoolDirection'), schoolName, schoolCct, schoolTurn, studentName, studentGrade, studentGroup, eventDate, tutorName, eventDescription];
         allInputs.forEach(input => {
             input.addEventListener('input', updatePreview);
             input.addEventListener('change', updatePreview);
@@ -933,6 +966,8 @@
                 schoolName: schoolName.value,
                 schoolCct: schoolCct.value,
                 schoolTurn: schoolTurn.value,
+                schoolDependency: document.getElementById('schoolDependency').value,
+                schoolDirection: document.getElementById('schoolDirection').value,
                 studentName: studentName.value,
                 studentGrade: studentGrade.value,
                 studentGroup: studentGroup.value.toUpperCase().trim(),
@@ -1088,6 +1123,9 @@
             schoolName.value = rep.schoolName;
             schoolCct.value = rep.schoolCct;
             schoolTurn.value = rep.schoolTurn;
+            // Reportes anteriores a la 8.9 no traen estos datos: se usan los guardados en el aparato
+            if (rep.schoolDependency) document.getElementById('schoolDependency').value = rep.schoolDependency;
+            if (rep.schoolDirection) document.getElementById('schoolDirection').value = rep.schoolDirection;
             studentName.value = rep.studentName;
             studentGrade.value = rep.studentGrade;
             studentGroup.value = rep.studentGroup;

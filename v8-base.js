@@ -1,11 +1,11 @@
 // ============================================================
-//  Reportes SEJ v8 — base compartida de las terminales
+//  CONVIVE360 v8 — base compartida de las terminales
 //  • Revisa que haya sesión válida (si no, regresa al inicio de sesión)
 //  • Conecta con el servidor usando el pase de la sesión
 //  • Separa los datos guardados en el aparato por usuario
 // ============================================================
 "use strict";
-const SEJ_VERSION = "8.8";
+const SEJ_VERSION = "8.9";
 
 const SEJ = (() => {
   const LS = window.localStorage;
@@ -108,7 +108,7 @@ function sejBarra(destinoCuenta, textoCuenta) {
   b.innerHTML = `
     <div style="background:#1D3557;color:#fff;font-family:'Segoe UI',Roboto,system-ui,sans-serif">
       <div style="max-width:80rem;margin:0 auto;display:flex;align-items:center;gap:.75rem;padding:.55rem 1rem;flex-wrap:wrap">
-        <b style="flex:1;min-width:10rem">Reportes SEJ · ${SEJ.ROL.etiqueta}</b>
+        <b style="flex:1;min-width:10rem">CONVIVE360 · ${SEJ.ROL.etiqueta}</b>
         <span id="sejRed" style="font-size:.8rem;padding:.1rem .55rem;border-radius:99px;background:rgba(255,255,255,.15)"></span>
         <span style="font-size:.9rem">${String(SEJ.usuario.nombre).replace(/[&<>"']/g, "")} (${SEJ.usuario.iniciales})</span>
         <span style="font-size:.72rem;opacity:.7" title="Versión de la app">v${SEJ_VERSION}</span>
