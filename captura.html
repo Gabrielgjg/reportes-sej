@@ -386,8 +386,8 @@
     <script>
         const presets = {
             cita_psicopedagogica: [
-                { text: "Valoración inicial por situaciones de conducta o convivencia reportadas por el personal docente o de prefectura.", action: "Entrevista inicial con el alumno y su familia; se acuerda un plan de acompañamiento." },
-                { text: "Seguimiento del plan de acompañamiento acordado en la cita anterior.", action: "Revisión de avances y ajuste de compromisos del alumno y la familia." },
+                { text: "Primera cita de atención psicopedagógica para valoración integral del estudiante.", action: "Entrevista inicial con el alumno y su familia; se acuerda un plan de acompañamiento." },
+                { text: "Cita de seguimiento al proceso de intervención psicopedagógica.", action: "Revisión de avances y ajuste de compromisos del alumno y la familia." },
                 { text: "Entrevista con madre, padre o tutor para conocer el contexto familiar y escolar del alumno.", action: "La familia se compromete a reforzar en casa los acuerdos establecidos." },
                 { text: "Canalización a una institución externa para atención especializada.", action: "Se entrega oficio de canalización y se solicita a la familia el informe de seguimiento." },
                 { text: "Cierre del caso por cumplimiento de los objetivos del acompañamiento.", action: "Se informa a la familia el cierre y se registra en el expediente del alumno." }
@@ -823,6 +823,18 @@
             updatePreview();
         });
 
+        // Citas capturadas con la versión anterior: el tipo de cita venía escrito al inicio de la descripción
+        function tipoDeCita(rep) {
+            if (rep && rep.appointmentType) return rep.appointmentType;
+            const t = String((rep && rep.eventDescription) || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            if (/primera cita|valoracion (inicial|integral)/.test(t)) return 'Primera cita (valoración inicial)';
+            if (/seguimiento/.test(t)) return 'Cita de seguimiento';
+            if (/canaliz/.test(t)) return 'Canalización externa';
+            if (/cierre/.test(t)) return 'Cierre de caso';
+            if (/(se cito|acude|acudio|entrevista).{0,60}(madre|padre|tutor|mama|papa|familia)/.test(t)) return 'Entrevista con madre, padre o tutor';
+            return 'Otra';
+        }
+
         // Ciclo escolar según la fecha del suceso (de agosto a julio)
         function cicloEscolarDe(fecha) {
             const d = fecha ? new Date(fecha + 'T12:00:00') : new Date();
@@ -1217,7 +1229,7 @@
                     if (document.getElementById('missingTasks')) document.getElementById('missingTasks').value = rep.missingTasks;
                     if (document.getElementById('tutorAgreement')) document.getElementById('tutorAgreement').value = rep.tutorAgreement;
                 } else if (rep.format === 'cita_psicopedagogica') {
-                    if (document.getElementById('appointmentType') && rep.appointmentType) document.getElementById('appointmentType').value = rep.appointmentType;
+                    if (document.getElementById('appointmentType')) document.getElementById('appointmentType').value = tipoDeCita(rep);
                     if (document.getElementById('appointmentDate')) document.getElementById('appointmentDate').value = rep.appointmentDate;
                     if (document.getElementById('appointmentTime')) document.getElementById('appointmentTime').value = rep.appointmentTime;
                     if (document.getElementById('tutorAgreement')) document.getElementById('tutorAgreement').value = rep.tutorAgreement;
