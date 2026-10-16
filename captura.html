@@ -556,6 +556,8 @@
                 notasNuevas = await descargarSeguimientos(true);
             } catch (e) { fallo = true; errorNotas = e.message || 'sin conexión'; }
             try { await SEJ.actualizarContadores(); } catch (e) { }
+            // También recupera reportes propios que falten en este aparato (por ejemplo, los de la versión anterior)
+            try { statusEl.textContent = "⬇️ Revisando tus reportes..."; await traerAnteriores(true); } catch (e) { }
 
             calculateNextFolio();
             renderHistory();

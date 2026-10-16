@@ -1,6 +1,6 @@
 // CONVIVE360 — funciona sin conexión.
 // La app se guarda en el aparato; las peticiones al servidor nunca se guardan.
-const CACHE = "reportes-sej-v8-9";
+const CACHE = "reportes-sej-v8-9-1";
 const ARCHIVOS = ["./", "./index.html", "./captura.html", "./direccion.html", "./v8-base.js", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"];
 // Diseño de las terminales (se guardan para funcionar sin conexión)
 const EXTERNOS = [
