@@ -124,6 +124,7 @@
                             <option value="citatorio">Citatorio a madre, padre o tutor</option>
                             <option value="omision">Reporte por Omitir Tareas o Actitudes (NEM)</option>
                             <option value="otro">Otro (Formato Libre / Personalizado)</option>
+                                <option value="cita_psicopedagogica">Cita psicopedagógica (Gabinete)</option>
                         </select>
                     </div>
 
@@ -384,6 +385,13 @@
     <!-- Script de Gestión, Interacción e Historial del Formato -->
     <script>
         const presets = {
+            cita_psicopedagogica: [
+                { text: "Valoración inicial por situaciones de conducta o convivencia reportadas por el personal docente o de prefectura.", action: "Entrevista inicial con el alumno y su familia; se acuerda un plan de acompañamiento." },
+                { text: "Seguimiento del plan de acompañamiento acordado en la cita anterior.", action: "Revisión de avances y ajuste de compromisos del alumno y la familia." },
+                { text: "Entrevista con madre, padre o tutor para conocer el contexto familiar y escolar del alumno.", action: "La familia se compromete a reforzar en casa los acuerdos establecidos." },
+                { text: "Canalización a una institución externa para atención especializada.", action: "Se entrega oficio de canalización y se solicita a la familia el informe de seguimiento." },
+                { text: "Cierre del caso por cumplimiento de los objetivos del acompañamiento.", action: "Se informa a la familia el cierre y se registra en el expediente del alumno." }
+            ],
             leve: [
                 { text: "Uso de lenguaje coloquial inapropiado o interrupciones constantes durante la dinámica del proyecto escolar.", action: "Diálogo reflexivo con el estudiante, compromiso verbal y registro en la bitácora individual." },
                 { text: "No portar los materiales necesarios requeridos de forma consensuada para el trabajo comunitario en el aula.", action: "Acuerdo colaborativo para la reposición de actividades bajo modelo socioformativo." },
@@ -455,6 +463,8 @@
         const SCRIPT_URL = SEJ.cfg.url;
         document.getElementById('prefectName').value = SEJ.usuario.nombre;
         SEJFotos.montar(document.getElementById('sejFotosCaptura'));
+        // La cita psicopedagógica es exclusiva del Gabinete
+        if (SEJ.usuario.rol !== 'gabinete') { const o = document.querySelector('#formatSelector option[value="cita_psicopedagogica"]'); if (o) o.remove(); }
         SEJPadron.montar();
 
         // Clave donde guardamos qué folios ya fueron enviados exitosamente
@@ -734,6 +744,33 @@
                         <input type="text" id="tutorAgreement" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: Supervisión diaria de bitácora y apoyo directo en elaboración de tareas.">
                     </div>
                 `;
+            } else if (format === 'cita_psicopedagogica') {
+                prevDocTitle.innerText = "Cita en Gabinete Psicopedagógico";
+                prevDocSubtitle.innerText = "Servicio de apoyo psicopedagógico del plantel";
+                prevDocIntro.innerText = "Por medio del presente se cita al estudiante y a su madre, padre o tutor a una sesión en el gabinete psicopedagógico del plantel, como parte del acompañamiento integral del alumno.";
+
+                additionalFieldsArea.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Tipo de cita</label>
+                        <select id="appointmentType" class="w-full bg-white border border-slate-300 rounded px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500"><option value="Primera cita (valoración inicial)">Primera cita (valoración inicial)</option><option value="Cita de seguimiento">Cita de seguimiento</option><option value="Entrevista con madre, padre o tutor">Entrevista con madre, padre o tutor</option><option value="Canalización externa">Canalización externa</option><option value="Cierre de caso">Cierre de caso</option><option value="Otra">Otra</option></select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Fecha de la cita</label>
+                            <input type="date" id="appointmentDate" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-0.5">Hora de la cita</label>
+                            <input type="time" id="appointmentTime" value="08:00" class="w-full bg-white border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-0.5">Compromisos y acuerdos</label>
+                        <textarea id="tutorAgreement" rows="2" class="w-full bg-white border border-slate-300 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" placeholder="Ej: La familia se compromete a…"></textarea>
+                    </div>
+                `;
+                const manana = new Date(); manana.setDate(manana.getDate() + 1);
+                document.getElementById('appointmentDate').value = manana.toISOString().split('T')[0];
             } else if (format === 'otro') {
                 prevDocTitle.innerText = "Documento";
                 prevDocSubtitle.innerText = "Departamento de Prefectura Escolar";
@@ -766,6 +803,7 @@
             const index = presetHechos.value;
             if (index !== "") {
                 eventDescription.value = presets[format][index].text;
+                if (format === 'cita_psicopedagogica') { const ag = document.getElementById('tutorAgreement'); if (ag) ag.value = presets[format][index].action; }
                 
                 if (format === 'leve' || format === 'moderada') {
                     const actInput = document.getElementById('actionApplied');
@@ -901,6 +939,31 @@
                     </div>
                 `;
                 legalFooterText.innerText = "* Fundamentado en la Ley General de Educación y los principios de la Nueva Escuela Mexicana...";
+            } else if (format === 'cita_psicopedagogica') {
+                const tipo = document.getElementById('appointmentType')?.value || 'No especificado';
+                const fRaw = document.getElementById('appointmentDate')?.value;
+                const hora = document.getElementById('appointmentTime')?.value || '--';
+                const acuerdos = document.getElementById('tutorAgreement')?.value || '[Pendiente]';
+                let fTxt = '[Sin fecha]';
+                if (fRaw) fTxt = new Date(fRaw + "T00:00:00").toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                prevDynamicContent.innerHTML = `
+                    <div class="space-y-3">
+                        <div>
+                            <strong class="text-slate-900 block">Tipo de cita:</strong>
+                            <div class="bg-teal-50 p-2 rounded text-teal-900 border border-teal-200 font-semibold">${escHTML(tipo)}</div>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded border border-slate-300 text-center">
+                            <p class="text-xs uppercase font-bold tracking-wider text-teal-900">Fecha y hora de la cita psicopedagógica</p>
+                            <p class="text-sm font-semibold mt-1">Día: <span class="underline">${escHTML(fTxt)}</span></p>
+                            <p class="text-sm font-semibold">Hora: <span class="underline">${escHTML(hora)} horas</span></p>
+                        </div>
+                        <div>
+                            <strong class="text-slate-900 block">Compromisos y acuerdos:</strong>
+                            <div class="bg-blue-50 p-2 rounded text-blue-900 border border-blue-200">${escHTML(acuerdos)}</div>
+                        </div>
+                    </div>
+                `;
+                legalFooterText.innerText = "* Esta cita se integra al expediente del alumno como parte del acompañamiento integral que promueve la Nueva Escuela Mexicana.";
             } else if (format === 'otro') {
                 const customTitleVal = document.getElementById('customTitle')?.value.trim() || 'Documento';
                 const customSubtitleVal = document.getElementById('customSubtitle')?.value.trim() || 'Departamento de Prefectura Escolar';
@@ -928,7 +991,7 @@
         formatSelector.addEventListener('change', updateFormType);
 
         function attachDynamicListeners() {
-            const dynamicFields = ['actionApplied', 'eventTime', 'witnesses', 'interventionPlan', 'appointmentDate', 'appointmentTime', 'missingTasks', 'tutorAgreement', 'customTitle', 'customSubtitle', 'customContent'];
+            const dynamicFields = ['appointmentType', 'actionApplied', 'eventTime', 'witnesses', 'interventionPlan', 'appointmentDate', 'appointmentTime', 'missingTasks', 'tutorAgreement', 'customTitle', 'customSubtitle', 'customContent'];
             dynamicFields.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -996,6 +1059,7 @@
                 interventionPlan: document.getElementById('interventionPlan')?.value || '',
                 appointmentDate: document.getElementById('appointmentDate')?.value || '',
                 appointmentTime: document.getElementById('appointmentTime')?.value || '',
+                appointmentType: document.getElementById('appointmentType')?.value || '',
                 missingTasks: document.getElementById('missingTasks')?.value || '',
                 tutorAgreement: document.getElementById('tutorAgreement')?.value || '',
                 customTitle: document.getElementById('customTitle')?.value || '',
@@ -1078,8 +1142,8 @@
                     const card = document.createElement('div');
                     card.className = "bg-white border border-slate-200 rounded-lg p-2.5 shadow-xs flex flex-col justify-between space-y-2";
                     
-                    const formatsMeta = { leve: "Leve", moderada: "Moderada", grave: "Grave", citatorio: "Citatorio", omision: "NEM Omisión", otro: "Otro" };
-                    const badgeColors = { leve: "bg-slate-100 text-slate-800", moderada: "bg-amber-100 text-amber-800", grave: "bg-red-100 text-red-800", citatorio: "bg-blue-100 text-blue-800", omision: "bg-purple-100 text-purple-800", otro: "bg-teal-100 text-teal-800" };
+                    const formatsMeta = { leve: "Leve", moderada: "Moderada", grave: "Grave", citatorio: "Citatorio", omision: "NEM Omisión", otro: "Otro", cita_psicopedagogica: "Cita psicopedagógica" };
+                    const badgeColors = { leve: "bg-slate-100 text-slate-800", moderada: "bg-amber-100 text-amber-800", grave: "bg-red-100 text-red-800", citatorio: "bg-blue-100 text-blue-800", omision: "bg-purple-100 text-purple-800", otro: "bg-teal-100 text-teal-800" , cita_psicopedagogica: "bg-teal-100 text-teal-800" };
                     const displayFolio = rep.folio ? rep.folio : "--";
                     const numNotas = rep.folio ? seguimientosDeFolio(rep.folio).length : 0;
 
@@ -1151,6 +1215,11 @@
                     if (document.getElementById('appointmentTime')) document.getElementById('appointmentTime').value = rep.appointmentTime;
                 } else if (rep.format === 'omision') {
                     if (document.getElementById('missingTasks')) document.getElementById('missingTasks').value = rep.missingTasks;
+                    if (document.getElementById('tutorAgreement')) document.getElementById('tutorAgreement').value = rep.tutorAgreement;
+                } else if (rep.format === 'cita_psicopedagogica') {
+                    if (document.getElementById('appointmentType') && rep.appointmentType) document.getElementById('appointmentType').value = rep.appointmentType;
+                    if (document.getElementById('appointmentDate')) document.getElementById('appointmentDate').value = rep.appointmentDate;
+                    if (document.getElementById('appointmentTime')) document.getElementById('appointmentTime').value = rep.appointmentTime;
                     if (document.getElementById('tutorAgreement')) document.getElementById('tutorAgreement').value = rep.tutorAgreement;
                 } else if (rep.format === 'otro') {
                     if (document.getElementById('customTitle')) document.getElementById('customTitle').value = rep.customTitle || '';

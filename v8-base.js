@@ -5,7 +5,7 @@
 //  • Separa los datos guardados en el aparato por usuario
 // ============================================================
 "use strict";
-const SEJ_VERSION = "8.9.1";
+const SEJ_VERSION = "8.10";
 
 const SEJ = (() => {
   const LS = window.localStorage;
