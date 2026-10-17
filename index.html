@@ -225,6 +225,15 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
       <option value="gabinete">Gabinete psicopedagógico</option>
       <option value="direccion">Dirección</option>
     </select>
+    <div id="duGradosCaja">
+      <label>Grados a su cargo</label>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:.35rem;margin:0;font-weight:500"><input type="checkbox" value="1°" data-grado style="width:auto"> 1°</label>
+        <label style="display:flex;align-items:center;gap:.35rem;margin:0;font-weight:500"><input type="checkbox" value="2°" data-grado style="width:auto"> 2°</label>
+        <label style="display:flex;align-items:center;gap:.35rem;margin:0;font-weight:500"><input type="checkbox" value="3°" data-grado style="width:auto"> 3°</label>
+      </div>
+      <div class="ayuda">Verá todos los reportes de los alumnos de esos grados (los de Gabinete, solo si Gabinete los comparte). Sin grados, solo ve los suyos.</div>
+    </div>
     <div class="error" id="duError" role="alert"></div>
     <div class="botones">
       <button class="btn sec" type="button" data-cerrar>Cancelar</button>
@@ -269,7 +278,7 @@ dialog .botones { display: flex; gap: .6rem; justify-content: flex-end; margin-t
 
 <script>
 "use strict";
-const APP_VERSION = "8.10";
+const APP_VERSION = "8.11";
 const K = { cfg: "sejv8_config", ses: "sejv8_sesion" }; // separado de las claves de la v7 (sej_)
 const ROLES = {
   prefectura: { etiqueta: "Prefectura", color: "var(--tinta)", sep: "-" },
@@ -696,7 +705,7 @@ function pintarUsuarios() {
             <td><b>${esc(u.nombre)}</b></td>
             <td data-t="Usuario">${esc(u.usuario)}</td>
             <td data-t="Iniciales" class="ini">${esc(u.iniciales)}</td>
-            <td><span class="etiqueta r-${esc(u.rol)}">${esc((ROLES[u.rol] || {}).etiqueta || u.rol)}</span></td>
+            <td><span class="etiqueta r-${esc(u.rol)}">${esc((ROLES[u.rol] || {}).etiqueta || u.rol)}</span>${u.rol === "prefectura" && (u.grados || []).length ? `<div class="ayuda" style="margin-top:.25rem">Grados: ${esc(u.grados.join(", "))}</div>` : ""}</td>
             <td>${estadoUsuario(u)}</td>
             <td data-t="Último acceso">${fechaCorta(u.ultimoAcceso)}</td>
             <td><div class="acciones">
@@ -738,6 +747,9 @@ function abrirUsuario(usuario) {
     $("duNombre").value = editando.nombre; $("duUsuario").value = editando.usuario;
     $("duIniciales").value = editando.iniciales; $("duRol").value = editando.rol;
   }
+  const marcados = (editando && editando.grados) || [];
+  document.querySelectorAll("[data-grado]").forEach(c => { c.checked = marcados.indexOf(c.value) >= 0; });
+  $("duGradosCaja").hidden = $("duRol").value !== "prefectura";
   revisarIniciales();
   $("dUsuario").showModal();
   $("duNombre").focus();
@@ -750,6 +762,7 @@ $("duNombre").addEventListener("input", () => {
 });
 $("duUsuario").addEventListener("input", () => { tocadoUsuario = true; });
 $("duIniciales").addEventListener("input", () => { tocadoIniciales = true; revisarIniciales(); });
+$("duRol").addEventListener("change", () => { $("duGradosCaja").hidden = $("duRol").value !== "prefectura"; });
 
 function revisarIniciales() {
   const ini = sinAcentos($("duIniciales").value).toUpperCase().trim();
@@ -775,13 +788,14 @@ $("fUsuario").addEventListener("submit", async ev => {
   if (!revisarIniciales()) { $("duError").textContent = "Esas iniciales ya están en uso."; return; }
   const datos = {
     nombre: $("duNombre").value.trim(), usuario: $("duUsuario").value.trim().toLowerCase(),
-    iniciales: sinAcentos($("duIniciales").value).toUpperCase().trim(), rol: $("duRol").value
+    iniciales: sinAcentos($("duIniciales").value).toUpperCase().trim(), rol: $("duRol").value,
+    grados: $("duRol").value === "prefectura" ? [...document.querySelectorAll("[data-grado]:checked")].map(c => c.value) : []
   };
   const btn = $("duGuardar");
   ocupado(btn, true, "Guardando…");
   try {
     if (editando) {
-      await api("actualizarUsuario", { usuario: editando.usuario, nombre: datos.nombre, iniciales: datos.iniciales, rol: datos.rol });
+      await api("actualizarUsuario", { usuario: editando.usuario, nombre: datos.nombre, iniciales: datos.iniciales, rol: datos.rol, grados: datos.grados });
       $("dUsuario").close(); toast("Cambios guardados.");
     } else {
       const d = await api("crearUsuario", datos);
